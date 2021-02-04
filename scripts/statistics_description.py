@@ -15,7 +15,18 @@ def descriptive_information(data):
 
 
 def calculate_correlation(data):
-    correlation_dict = get_correlation(x_variable=data["minimal_mutants"], y_variable=data["minimal_relevant_mutants"])
+    # data = data[data["minimal_mutants"] < 2000]
+
+    correlation_dict = get_correlation(x_variable=data["relevant_mutants"], y_variable=data["mutants_on_change"])
+    print("Relevant:Change")
+    print(correlation_dict)
+
+    correlation_dict = get_correlation(x_variable=data["minimal_relevant_mutants"], y_variable=data["mutants_on_change"])
+    print("Relevant-Minimal:Change")
+    print(correlation_dict)
+
+    correlation_dict = get_correlation(x_variable=data["minimal_relevant_mutants"], y_variable=data["minimal_mutants"])
+    print("Relevant-Minimal:Minimal")
     print(correlation_dict)
 
 

@@ -11,24 +11,32 @@ import matplotlib.pyplot as plt
 
 def scatter_plot(data):
 
-    fig, axes = plt.subplots(ncols=2, nrows=1)
+    fig, axes = plt.subplots(ncols=3, nrows=1, constrained_layout=True)
 
     fig.set_figheight(5)
     fig.set_figwidth(12)
 
-    axeLeft = sns.scatterplot(data=data, x="relevant_mutants", y="mutants_on_change", ax=axes[0])
-    axeRight = sns.scatterplot(data=data, x="minimal_mutants", y="minimal_relevant_mutants", ax=axes[1])
+    data = data[data["minimal_mutants"] < 2000]
 
-    axeRight.set_ylabel("Minimal mutants", fontsize=12)
-    axeRight.set_xlabel("Minimal sufficient mutants", fontsize=12)
+    axeLeft = sns.scatterplot(data=data, x="relevant_mutants", y="mutants_on_change", ax=axes[0])
+    axeMiddle = sns.scatterplot(data=data, x="minimal_relevant_mutants", y="mutants_on_change", ax=axes[1])
+    axeRight = sns.scatterplot(data=data, x="minimal_relevant_mutants", y="minimal_mutants", ax=axes[2])
 
     axeLeft.set_ylabel("Mutants on a change", fontsize=12)
-    axeLeft.set_xlabel("Sufficient mutants", fontsize=12)
+    axeLeft.set_xlabel("Relevant Mutants", fontsize=12)
 
-    plt.savefig(os.path.join("./plots", "Scatter_plot_correlation.pdf"),
-                format='pdf', dpi=1200)
+    axeMiddle.set_ylabel("Mutants on a change", fontsize=12)
+    axeMiddle.set_xlabel("Minimal Relevant Mutants", fontsize=12)
 
+    axeRight.set_ylabel("Minimal Mutants", fontsize=12)
+    axeRight.set_xlabel("Minimal Relevant Mutants", fontsize=12)
+
+    plt.savefig(os.path.join("./plots", "Scatter_plot:correlations.pdf"),
+                format='pdf', dpi=1500)
+
+    # plt.tight_layout()
     plt.show()
+    print()
 
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(description="Script to perform statistics")
@@ -40,5 +48,5 @@ if __name__ == '__main__':
     arguments = parser.parse_args()
     dataframe = pd.read_csv(filepath_or_buffer=arguments.path_to_data_file, thousands=",")
 
-    # scatter_plot(data=dataframe)
+    scatter_plot(data=dataframe)
 

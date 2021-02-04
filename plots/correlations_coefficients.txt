@@ -1,0 +1,7 @@
+Relevant:Change
+{'pearson': {'corr': 0.069658686104615, 'p-value': 0.25668116783365963}, 'kendall': {'corr': 0.13534516741115526, 'p-value': 0.0010811119224109385}}
+Relevant-Minimal:Change
+{'pearson': {'corr': 0.08206535720496252, 'p-value': 0.1812475712008079}, 'kendall': {'corr': 0.14516313743599896, 'p-value': 0.00047837158806066923}}
+Relevant-Minimal:Minimal
+{'pearson': {'corr': 0.07078366806258307, 'p-value': 0.2490604621808399}, 'kendall': {'corr': 0.3525124683007148, 'p-value': 1.5083577078892213e-17}}
+
