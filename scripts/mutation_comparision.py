@@ -64,13 +64,32 @@ class Mutant(object):
         return hash((self.class_name, self.lineNumber, self.index, self.block, self.mutant_operator, self.mutatedMethod, self.methodDescription))
 
 
+def calculate_minimal_mutants(mutants):
+    mutants_killed = [mutant for mutant in mutants if len(mutant.killingTests) != 0]
+    # equivalent = [mutant for mutant in mutants if len(mutant.killingTests) == 0 and len(mutant.succidingTests) == 0]
+    equivalent_not_killed = [mutant for mutant in mutants if len(mutant.killingTests) == 0]
+    killing_tests = set()
+    for mutant in mutants_killed:
+        if mutant.killingTests not in killing_tests:
+            killing_tests.add(mutant.killingTests)
 
-def map_mutants(mutants_info_dataframe, mutation_matrix_dataframe):
+    minimal_mutants = set(mutants_killed)
+    for mutant in mutants_killed:
+        minimal_mutants = minimal_mutants - set([m for m in minimal_mutants if mutant.killingTests.issubset(
+            m.killingTests) and mutant.killingTests != m.killingTests])
+
+    return [minimal_mutants, set(mutants_killed) - minimal_mutants, mutants_killed, equivalent_not_killed]
+
+
+def map_mutants(mutants_info_path, mutation_matrix_path):
+    mutants_info_df = pd.read_csv(filepath_or_buffer=mutants_info_path, index_col="MutantID", delimiter=",")
+    mutation_matrix_df = pd.read_csv(filepath_or_buffer=mutation_matrix_path, index_col="MutantID", delimiter=",")
+
     all_fom_mutants = []
     for _index, row in mutation_matrix_df.iterrows():
         mutant = Mutant()
         mutant.mutant_ID = _index
-        mutant.killingTests = set([r[0] for r in row.iteritems() if r[1] == 1])
+        mutant.killingTests = frozenset([r[0] for r in row.iteritems() if r[1] == 1])
         mutant_info = mutants_info_df.loc[[_index]]
         mutant.is_relevant = mutant_info["Relevant"].iloc[0]
         mutant.is_not_relevant = mutant_info["Not_relevant"].iloc[0]
@@ -93,13 +112,6 @@ def map_mutants(mutants_info_dataframe, mutation_matrix_dataframe):
 
     all_granularity_level = relevant_mutants + not_relevant_mutants + on_change_mutants
 
-    print("All fom mutants: {number}".format(number=len(all_fom_mutants)))
-    print("All granularity: {number}".format(number=len(all_granularity_level)))
-    print("Relevant mutants: {number}".format(number=len(relevant_mutants)))
-    print("Not relevant mutants: {number}".format(number=len(not_relevant_mutants)))
-    print("On change mutants: {number}".format(number=len(on_change_mutants)))
-    print("Minimal relevant mutants: {number}".format(number=len(minimal_relevant_mutants)))
-
     return all_fom_mutants, all_granularity_level, relevant_mutants, not_relevant_mutants, on_change_mutants, minimal_relevant_mutants
 
 if __name__ == '__main__':
@@ -108,6 +120,6 @@ if __name__ == '__main__':
     mutants_info_df = pd.read_csv(filepath_or_buffer=arguments.mutants_info, index_col="MutantID", delimiter=",")
     mutation_matrix_df = pd.read_csv(filepath_or_buffer=arguments.mutation_matrix, index_col="MutantID", delimiter=",")
 
-    all_fom_mutants, all_granularity_level, relevant_mutants, not_relevant_mutants, on_change_mutants, minimal_relevant_mutants = map_mutants(mutants_info_dataframe=mutants_info_df, mutation_matrix_dataframe=mutation_matrix_df)
+    all_fom_mutants, all_granularity_level, relevant_mutants, not_relevant_mutants, on_change_mutants, minimal_relevant_mutants = map_mutants(mutants_info_path=arguments.mutants_info, mutation_matrix_path=arguments.mutation_matrix)
 
     print()

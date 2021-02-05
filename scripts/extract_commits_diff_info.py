@@ -1,12 +1,17 @@
 import argparse
+import csv
+
 from pydriller import RepositoryMining
 from pydriller.metrics.process.hunks_count import HunksCount
+import pandas as pd
 
 import os
-
+from operator import itemgetter
+from itertools import groupby
 
 # import logging
 # logging.basicConfig(level=logging.INFO)
+from scripts.mutation_comparision import map_mutants
 
 
 def parse_commit_diff(project_git_url, commit_id):
@@ -111,11 +116,95 @@ def parse_commit_diff(project_git_url, commit_id):
                                                                                     dmm_unit_interfacing)))
 
 
+def commit_mutants_propertires(data_file_path, path_to_mutants_data, output_path):
+    data_frame = pd.read_csv(data_file_path, index_col="commit", thousands=",")
+
+    mutants_types = set()
+    mutants_types_dict = []
+
+    mutants_on_method = {"In_Method": 0, "Not_In_Method": 0}
+
+    mutants_on_hunks = []
+    for _index, row in data_frame.iterrows():
+        mutationMatrixPath = path_to_mutants_data + "/" + row["project"] + "/" + _index + "/" + "mutationMatrix.csv"
+        mutantsInfoPath = path_to_mutants_data + "/" + row["project"] + "/" + _index + "/" + "mutants_info.csv"
+
+        assert os.path.exists(mutationMatrixPath), "Does not exists: " + mutationMatrixPath
+        assert os.path.exists(mutantsInfoPath), "Does not exists: " + mutantsInfoPath
+
+        print(_index)
+        all_fom_mutants, all_granularity_level, relevant_mutants, not_relevant_mutants, on_change_mutants, minimal_relevant_mutants = map_mutants(
+            mutants_info_path=mutantsInfoPath, mutation_matrix_path=mutationMatrixPath)
+
+        # group mutants based on a mutant type
+        [mutants_types.add(mutant_type.mutant_operator) for mutant_type in relevant_mutants]
+        # print(mutants_types)
+        for mutants_type in mutants_types:
+            mutants_types_dict.append({"Mutant_Type" : mutants_type, "Mutants" : len([mutant for mutant in relevant_mutants if mutant.mutant_operator == mutants_type])})
+
+        for commit in RepositoryMining(path_to_repo="https://github.com/apache/commons-" + row["project"].split("-")[1] + ".git", single=_index).traverse_commits():
+            for m in commit.modifications:
+                # check if mutants are on changed methods
+                if "Test" in m.filename.split("/")[-1]:
+                    continue
+                changed_methods = []
+                for method in m.changed_methods:
+                    changed_methods.append(method.name.split("::")[-1])
+                mutants_in_file_modified= [mutant for mutant in relevant_mutants if mutant.sourceFile == m.filename.split("/")[-1]]
+                for mutant in mutants_in_file_modified:
+                    if mutant.mutatedMethod in changed_methods:
+                        mutants_on_method["In_Method"] += 1
+                    else:
+                        mutants_on_method["Not_In_Method"] += 1
+
+                # change_lines_per_file = list(map(lambda x: x[0], m.diff_parsed["added"]))
+                # grouped = [map(itemgetter(1), g) for k, g in groupby(enumerate(change_lines_per_file), lambda i_x: i_x[0] - i_x[1])]
+
+        # check mutants associated with hunks
+        hunks = HunksCount(path_to_repo="https://github.com/apache/commons-" + row["project"].split("-")[1] + ".git", from_commit=_index, to_commit=_index)
+        hunks_dict = hunks.count()
+
+        for file, hunks_number in hunks_dict.items():
+            file = file.split("/")[-1]
+            if "Test" in file:
+                continue
+            mutants = len([mutant for mutant in relevant_mutants if mutant.sourceFile == file])
+            if mutants == 0:
+                print()
+            mutants_on_hunks.append({"CommitID" : _index,"Hunks" : hunks_number, "Mutants" : mutants})
+
+    try:
+        with open(output_path + "/mutants_type_distribution.csv", 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=["Mutant_Type", "Mutants"])
+            writer.writeheader()
+            for data in mutants_types_dict:
+                writer.writerow(data)
+    except IOError:
+        print("I/O error")
+
+    with open(output_path + "/mutants_in_changed_method.txt", "w") as output_file:
+        output_file.write("Mutant In Method: {} \nMutants Outside Method: {}".format(str(mutants_on_method["In_Method"]),str(mutants_on_method["Not_In_Method"])))
+
+    try:
+        with open(output_path + "/mutants_on_hunks.csv", 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=["CommitID", "Hunks", "Mutants"])
+            writer.writeheader()
+            for data in mutants_on_hunks:
+                writer.writerow(data)
+    except IOError:
+        print("I/O error")
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Extract metrices related to the particular commit changes")
-    parser.add_argument("project_git_url", type=str, help="Target project git url")
-    parser.add_argument("commit_id", type=str, help="Commit on which to perform analysis")
+    parser.add_argument("-p", "--project_git_url", action="store", help="Target project git url")
+    parser.add_argument("-c", "--commit_id", action="store", help="Commit on which to perform analysis")
+    parser.add_argument("-s", "--statistics_file", action="store", help="File where information about mutants is")
+    parser.add_argument("-m", "--path_to_mutants_data", action="store", help="Set path to mutants data")
+    parser.add_argument("-o", "--output_dir", action="store", help="Set path to output directory")
 
     arguments = parser.parse_args()
 
-    parse_commit_diff(arguments.project_git_url, arguments.commit_id)
+    # parse_commit_diff(arguments.project_git_url, arguments.commit_id)
+
+    commit_mutants_propertires(data_file_path=arguments.statistics_file, path_to_mutants_data=arguments.path_to_mutants_data,
+                         output_path=arguments.output_dir)
