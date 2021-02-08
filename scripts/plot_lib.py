@@ -2,6 +2,8 @@ import os
 import sys
 import argparse
 import pandas as pd
+from numpy import mean, std
+
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.max_rows', None)
 pd.set_option('display.width', 2000)
@@ -83,6 +85,177 @@ def box_plot_stacked(data, output_dir):
     plt.show()
     print()
 
+def grouped_box_plots_computation_effort_simulation(data, output_dir):
+    print("Columns:")
+    print(data.columns)
+    print()
+    print(data["mutant_pool"].unique())
+    print(data["target"].unique())
+
+    data = data[data["target"] == "Target_Relevant"]
+
+    data = data.rename(columns={"ms_progression": "MS"})
+
+    data["MS"] = data["MS"].round(0).astype(int)
+
+    mapping_dict = []
+    for commit in data.commit.unique():
+        commit_data = data.loc[data["commit"] == commit]
+        for limit in commit_data.limit.unique():
+            limit_data = commit_data.loc[commit_data["limit"] == limit]
+            for percentage in limit_data.MS.unique():
+                percentage_data = limit_data.loc[limit_data.MS == percentage]
+
+                all = percentage_data[percentage_data["mutant_pool"] == "all"]
+                relevant = percentage_data[percentage_data["mutant_pool"] == "relevant"]
+                modification = percentage_data[percentage_data["mutant_pool"] == "modification"]
+                minimal_relevant = percentage_data[percentage_data["mutant_pool"] == "minimal_relevant"]
+                minimal = percentage_data[percentage_data["mutant_pool"] == "minimal"]
+
+                # print(len(all))
+                # print(len(relevant))
+                # print(len(modification))
+                # print(len(predicted))
+
+                for iteration in range(0, np.min([len(all), len(relevant), len(modification), len(minimal_relevant), len(minimal)])):
+                    selected_all = all.head(1)
+                    all = all.iloc[1:]
+
+                    selected_relevant = relevant.head(1)
+                    relevant = relevant.iloc[1:]
+
+                    selected_modification = modification.head(1)
+                    modification = modification.iloc[1:]
+
+                    selected_minimal_relevant = minimal_relevant.head(1)
+                    minimal_relevant = minimal_relevant.iloc[1:]
+
+                    selected_minimal = minimal.head(1)
+                    minimal = minimal.iloc[1:]
+
+                    for technique, mutants_picked, tests_picked in [("All", selected_all["mutants_picked"].iloc[0], selected_all["tests_picked"].iloc[0]),
+                                                                    ("Relevant", selected_relevant["mutants_picked"].iloc[0], selected_relevant["tests_picked"].iloc[0]),
+                                                                    ("Modification", selected_modification["mutants_picked"].iloc[0], selected_modification["tests_picked"].iloc[0]),
+                                                                    ("Minimal_Relevant", selected_minimal_relevant["mutants_picked"].iloc[0], selected_minimal_relevant["tests_picked"].iloc[0]),
+                                                                    ("Minimal", selected_minimal["mutants_picked"].iloc[0], selected_minimal["tests_picked"].iloc[0])]:
+                        mapping_dict.append({"Technique": technique, "Mutants_Picked": mutants_picked, "Tests_picked": tests_picked, "MS": percentage})
+
+
+    print()
+
+    data = pd.DataFrame(mapping_dict)
+
+    print(data.columns)
+
+    data['Technique'] = data['Technique'].replace({ "All" : "Random" })
+
+    # data = data.loc[data['Technique'].isin(["Random", "Predicted", "Minimal", "Relevant"])]
+    # data = data.loc[data['Technique'].isin(["Random", "Minimal", "Relevant", "Minimal_Relevant"])]
+    data = data.loc[data['Technique'].isin(["Random", "Relevant", "Minimal_Relevant"])]
+
+    stats = data.describe(include='all').loc[["mean", "std"]]
+    print(stats)
+
+    # calculate summary statistics
+    data_mean, data_std = mean(data["Tests_picked"]), std(data["Tests_picked"])
+    print("Mean:" , data_mean)
+    print("Std:" , data_std)
+    # identify outliers
+    cut_off = data_std * 3
+    lower, upper = data_mean - cut_off, data_mean + cut_off
+    print("Lower: ", lower)
+    print("Upper: ", upper)
+    q = data["Tests_picked"].quantile(0.99)
+    print("Upper quantile: ", q)
+    min, max = np.min(data["Tests_picked"]), np.max(data["Tests_picked"])
+    print("Min: " , min)
+    print("Max: " , max)
+    # identify outliers
+    outliers = [x for x in data["Tests_picked"] if x < lower or x > upper]
+    print('Identified outliers: ')
+    print("Number: ", len(outliers))
+    # print("Range: {}-{}".format(np.min(outliers), np.max(outliers)))
+
+    print(data.dtypes)
+    data = data.loc[data["Tests_picked"] < 2500]
+    print("After")
+    min, max = np.min(data["Tests_picked"]), np.max(data["Tests_picked"])
+    print("Min: ", min)
+    print("Max: ", max)
+
+    print(data['Technique'].unique())
+
+    # Share both X and Y axes with all subplots
+    # fig, axes = plt.subplots(ncols=2, nrows=1, sharex='all', sharey='all')
+    fig, axes = plt.subplots(ncols=1, nrows=1)
+    fig.set_figheight(12)
+    fig.set_figwidth(10)
+    # fig.add_subplot(111, frameon=False)
+
+    my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', 'Minimal_Relevant': 'turquoise'}
+    # my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', "Minimal": "firebrick"}
+
+    # m_picked = sea.boxplot(x="Technique", y="Mutants_Picked", data=data, ax=axes[0], palette=my_pal)
+    # # m_picked = sea.swarmplot(x="Technique", y="Mutants_Picked", data=data, color=".25")
+    # m_picked.set_ylabel("Number of mutants", fontsize=18)
+    # m_picked.tick_params(labelsize=12, axis='x')
+    # m_picked.tick_params(labelsize=22, axis='y')
+    # m_picked.set_title("Human effort")
+    # m_picked.set_xlabel("", fontsize=12)
+
+    t_picked = sns.boxplot(x="Technique", y="Tests_picked", data=data, ax=axes, palette=my_pal)
+    t_picked.set_ylabel("Number of tests", fontsize=18)
+    t_picked.tick_params(labelsize=15, axis='x')
+    t_picked.tick_params(labelsize=22, axis='y')
+    t_picked.set_title("Computation effort")
+    t_picked.set_xlabel("", fontsize=15)
+    # t_picked.set_yticks(np.arange(0, max, 100))
+
+    # t_picked.margins(x=0.0)
+
+    print("Minumum value: ", str(np.min(data["Tests_picked"])))
+
+    #     hatches = ['/', '*', 'x', "O", "*"]
+    hatches = ['/', '*', '.']
+    # hatches = ['/', '*', "O"]
+    i = 0
+    # for picked_bar, tests_picked in zip(m_picked.patches, t_picked.patches):
+    for tests_picked in t_picked.patches:
+        if i == 3:
+            i = 0
+        # picked_bar.set_hatch(hatches[i])
+        tests_picked.set_hatch(hatches[i])
+        i += 1
+
+    i = 0
+    # for picked_bar, tests_picked in zip(m_picked.artists, t_picked.artists):
+    for tests_picked in t_picked.artists:
+        if i == 3:
+            i = 0
+        # picked_bar.set_hatch(hatches[i])
+        tests_picked.set_hatch(hatches[i])
+        i += 1
+
+    # plt.xlabel("Techniques")
+    # plt.ylabel("common Y")
+
+
+    # fig.text(0.55, 0.01, 'Selections', ha='center', va='center')
+    # fig.text(0.01, 0.5, 'common ylabel', ha='center', va='center', rotation='vertical')
+
+    plt.savefig(os.path.join(output_dir, "Box_plot:{}:{}.pdf".format('Simulation', "computational_effort")),
+                                             format='pdf',
+                                             dpi=1500)
+    # plt.savefig(os.path.join(dir_path,"{}_{}.eps".format('Boxplot', "human_effort_v2")),
+    #                                          format='eps',
+    #                                          dpi=1200)
+
+    # plt.subplots_adjust(left=0.2, bottom=0.2, right=0.8, top=0.8, wspace=0.2, hspace=0.4)
+    plt.tight_layout()
+    plt.show()
+    print()
+
+
 def grouped_box_plots_developer_simulation(data, output_dir):
     # data.columns = data.columns.to_series().apply(lambda x: x.strip())
 
@@ -92,7 +265,7 @@ def grouped_box_plots_developer_simulation(data, output_dir):
     print(data["mutant_pool"].unique())
     print(data["target"].unique())
 
-    data = data[data["target"] == "Target_Minimal_Relevant"]
+    data = data[data["target"] == "Target_Relevant"]
 
     data = data.rename(columns={"ms_progression": "MS"})
 
@@ -164,4 +337,5 @@ if __name__ == '__main__':
 
     # scatter_plot(data=dataframe)
     # box_plot_stacked(data=dataframe, output_dir=arguments.output_dir)
-    grouped_box_plots_developer_simulation(data=dataframe, output_dir=arguments.output_dir)
+    # grouped_box_plots_developer_simulation(data=dataframe, output_dir=arguments.output_dir)
+    grouped_box_plots_computation_effort_simulation(data=dataframe, output_dir=arguments.output_dir)

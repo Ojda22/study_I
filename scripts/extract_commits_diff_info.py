@@ -5,6 +5,10 @@ from pydriller import RepositoryMining
 from pydriller.metrics.process.hunks_count import HunksCount
 import pandas as pd
 
+
+import sys
+sys.path.append("/Users/milos.ojdanic/phd_workspace/Mutants_CI/relevantMutant_Milos/study_I")
+
 import os
 from operator import itemgetter
 from itertools import groupby
