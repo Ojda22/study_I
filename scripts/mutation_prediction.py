@@ -101,6 +101,7 @@ def data_preparation(data, output_path):
     print("\n\n")
     print(data.isna().sum())
     print()
+    print()
 
     identification_features = ["CommitDate", "Project", "Mutator",
                                "SourceFile", "MutatedClass", "MutatedMethod", "LineNumber", "Index", "Block",
