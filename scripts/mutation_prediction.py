@@ -11,6 +11,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
 sys.path.append("/Users/milos.ojdanic/phd_workspace/Mutants_CI/relevantMutant_Milos/study_I")
+# sys.path.append("/home/mojdanic/study_I")
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -280,38 +281,38 @@ if __name__ == '__main__':
     # Load DATA
     data = load_data(path_to_file=arguments.path_to_file)
 
-    data_preparation(data=data, output_path=path_to_training_data)
+    # data_preparation(data=data, output_path=path_to_training_data)
 
     # Split data -> # Check if split by project, # Check what is target label ["Minimal", "Relevant"], # Check for split ratio, # Check for validation
-    # identification_data, X_train, X_test, y_train, y_test, X_eval, y_eval = split_data(data=data,
-    #            project_name=arguments.project_name,
-    #            target_class=["Relevant"],
-    #            training_threadshold=0.7,
-    #            evaluation_threadshold=0.8,
-    #            validation_type="Intra")
-    #
-    # xg_classifier = xgb.XGBClassifier(objective="binary:logistic",
-    #                                   n_estimators=200)
-    # rf_classifier = RandomForestClassifier(random_state=42,
-    #                                        n_estimators=200,
-    #                                        max_features="sqrt",
-    #                                        class_weight="balanced_subsample")
-    # # log_classifier = LogisticRegression(solver="lbfgs", random_state=42)
-    # svm_classifier = SVC(gamma="scale", probability=True, random_state=42)
-    #
-    # logging.info("Fitting the model")
-    #
-    # voting_clf = VotingClassifier(
-    #     estimators=[("xgb", xg_classifier), ('rf', rf_classifier), ('svm', svm_classifier)],
-    #     voting='soft'
-    # )
-    #
-    # voting_clf.fit(X_train, y_train)
-    #
-    # for clf in (rf_classifier, svm_classifier, xg_classifier, voting_clf):
-    #     clf.fit(X_train, y_train)
-    #     y_pred = clf.predict(X_test)
-    #     print(clf.__class__.__name__, accuracy_score(y_test, y_pred))
+    identification_data, X_train, X_test, y_train, y_test, X_eval, y_eval = split_data(data=data,
+               project_name=arguments.project_name,
+               target_class=["Relevant"],
+               training_threadshold=0.7,
+               evaluation_threadshold=0.8,
+               validation_type="Intra")
+
+    xg_classifier = xgb.XGBClassifier(objective="binary:logistic",
+                                      n_estimators=200)
+    rf_classifier = RandomForestClassifier(random_state=42,
+                                           n_estimators=200,
+                                           max_features="sqrt",
+                                           class_weight="balanced_subsample")
+    # log_classifier = LogisticRegression(solver="lbfgs", random_state=42)
+    svm_classifier = SVC(gamma="scale", probability=True, random_state=42)
+
+    logging.info("Fitting the model")
+
+    voting_clf = VotingClassifier(
+        estimators=[("xgb", xg_classifier), ('rf', rf_classifier), ('svm', svm_classifier)],
+        voting='soft'
+    )
+
+    voting_clf.fit(X_train, y_train)
+
+    for clf in (rf_classifier, svm_classifier, xg_classifier, voting_clf):
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+        print(clf.__class__.__name__, accuracy_score(y_test, y_pred))
 
     # X_train_val = X_train  # shuffle it, and than take 20% of all
     # y_train_val = X_train  # shuffle it, and than take 20% of all

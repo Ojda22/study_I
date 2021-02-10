@@ -65,6 +65,39 @@ def agregation_functions(data):
 
     # df = pd.DataFrame(columns=["Mutants", "Commits", "Index"], data=[])
 
+def fault_revelation(data):
+    print(data.describe())
+    print(data.columns)
+
+    print(data.groupby(["mutant_pool", "percentage", "exists"]).sum())
+
+    mutants_pools = data["mutant_pool"].unique()
+    percentages = data["percentage"].unique()
+
+    data_map = []
+    for pool in mutants_pools:
+        pool_data = data[data["mutant_pool"] == pool]
+        for percentage in percentages:
+            percentage_pool_data = pool_data[pool_data["percentage"] == percentage]
+
+            does_not = len(percentage_pool_data[percentage_pool_data['exists'] == 0])
+            exists = len(percentage_pool_data[percentage_pool_data['exists'] == 1])
+
+            if does_not == 0:
+                ms = 1.0
+            elif exists == 0:
+                ms = 0.0
+            else:
+                ms = exists / (exists + does_not)
+
+            data_map.append({"pool" : pool, "percentage" : percentage, "ms" : ms})
+
+    print(data_map)
+
+    data = pd.DataFrame(data=data_map)
+
+    print(data)
+    print()
 
 def agregation_functions_mutants_operators(data):
     # data.columns = data.columns.to_series().apply(lambda x: x.strip().split("mutators.")[-1])
@@ -88,5 +121,6 @@ if __name__ == '__main__':
 
     # descriptive_information(data=dataframe)
     # calculate_correlation(data=dataframe)
-    agregation_functions(data=dataframe)
+    # agregation_functions(data=dataframe)
     # agregation_functions_mutants_operators(data=dataframe)
+    fault_revelation(data=dataframe)

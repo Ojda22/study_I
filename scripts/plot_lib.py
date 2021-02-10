@@ -324,6 +324,17 @@ def grouped_box_plots_developer_simulation(data, output_dir):
     plt.show()
     print()
 
+
+def lineplot(data, output_dir):
+    sns.lineplot(data=data, x="percentage", y="ms", hue="mutant_pool")
+    plt.savefig(os.path.join(output_dir,
+                             "Line_plot:{}:{}.pdf".format('Simulation', "fault_revelation_v2")),
+                format='pdf',
+                dpi=1200)
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(description="Script to perform statistics")
     parser.add_argument("-p", "--path_to_data_file",
@@ -338,4 +349,5 @@ if __name__ == '__main__':
     # scatter_plot(data=dataframe)
     # box_plot_stacked(data=dataframe, output_dir=arguments.output_dir)
     # grouped_box_plots_developer_simulation(data=dataframe, output_dir=arguments.output_dir)
-    grouped_box_plots_computation_effort_simulation(data=dataframe, output_dir=arguments.output_dir)
+    # grouped_box_plots_computation_effort_simulation(data=dataframe, output_dir=arguments.output_dir)
+    lineplot(data=dataframe, output_dir=arguments.output_dir)
