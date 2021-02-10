@@ -10,8 +10,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
-sys.path.append("/Users/milos.ojdanic/phd_workspace/Mutants_CI/relevantMutant_Milos/study_I")
-# sys.path.append("/home/mojdanic/study_I")
+# sys.path.append("/Users/milos.ojdanic/phd_workspace/Mutants_CI/relevantMutant_Milos/study_I")
+sys.path.append("/home/mojdanic/study_I")
 
 import logging
 logging.basicConfig(level=logging.INFO)
