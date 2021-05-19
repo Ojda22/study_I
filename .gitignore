@@ -1,4 +1,6 @@
 data/
+plots/
+*.csv
 
 bile Tools for Java (J2ME)
 .mtj.tmp/
