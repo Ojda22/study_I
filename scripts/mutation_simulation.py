@@ -38,86 +38,110 @@ def venn_diagram_simulation(data, path_to_mutants_data, output_path):
             relevant_mutants_with_change)
         subsumed_killed_mutants.update(equivalent)
 
-        # print("All fom mutants: {number}".format(number=len(all_fom_mutants)))
-        # print("All granularity: {number}".format(number=len(all_granularity_level)))
-        # print("Relevant mutants: {number}".format(number=len(relevant_mutants)))
-        # print("Not relevant mutants: {number}".format(number=len(not_relevant_mutants)))
-        # print("On change mutants: {number}".format(number=len(on_change_mutants)))
-        # print("Minimal relevant mutants: {number}".format(number=len(minimal_relevant_mutants)))
-        # print("Minimal mutants: {number}".format(number=len(minimal_mutants)))
+        print("Number of subsuming mutants: ", len(minimal_mutants))
+        print("Number of subsuming relevant mutants: ", len(minimal_relevant_mutants))
+        print("Number of mutants on change: ", len(relevant_mutants))
 
-        # print("\n")
+        hard_to_kill = [mutant for mutant in all_granularity_level if mutant.hard_to_kill_score() <= 0.025]
+        print("Number of hard to kill mutants: ", len(hard_to_kill))
 
-        minimal_change_intersection = set(minimal_mutants).intersection(set(on_change_mutants))
-        minimal_relevantminimal_intersection = set(minimal_mutants).intersection(set(minimal_relevant_mutants))
-        change_relevantminimal_intersection = set(on_change_mutants).intersection(minimal_relevant_mutants)
+        argument_output_file = output_path + "/comparison_qmi.csv"
+        with open(argument_output_file, "a+") as output_file:
+            if os.stat(argument_output_file).st_size == 0:
+                output_file.write("{},{},{},{},{}".format("mid", "subsuming", "relevant_subsuming", "change", "hard_to_kill"))
+                output_file.write("\n")
 
-        # minimal_relevant_minimal_change_intersection = minimal_change_intersection.intersection(minimal_relevantminimal_intersection).intersection(change_relevantminimal_intersection)
-        d = [on_change_mutants, minimal_relevant_mutants, minimal_mutants]
-        minimal_relevant_minimal_change_intersection = set.intersection(*[set(x) for x in d])
-
-        print(len(minimal_change_intersection))
-        print(len(minimal_relevantminimal_intersection))
-        print(len(change_relevantminimal_intersection))
-        print(len(minimal_relevant_minimal_change_intersection))
-
-        # percentages for minimal
-        percent_minimal_in_change = len(minimal_change_intersection) / len(minimal_mutants)
-        percent_minimal_in_relevant_minimal = len(minimal_relevantminimal_intersection) / len(minimal_mutants)
-        percent_minimal_in_all = len(minimal_relevant_minimal_change_intersection) / len(minimal_mutants)
-
-        percent_minimal_rest = len([mutant for mutant in minimal_mutants if mutant not in minimal_change_intersection and mutant not in minimal_relevantminimal_intersection and mutant not in minimal_relevant_minimal_change_intersection]) / len(minimal_mutants)
-
-        # print(percent_minimal_in_change)
-        # print(percent_minimal_in_relevant_minimal)
-        # print(percent_minimal_in_all)
-        # print(percent_minimal_rest)
-
-        # percentages for change
-        percent_change_in_minimal = len(minimal_change_intersection) / len(on_change_mutants)
-        percent_change_in_relevant_minimal = len(change_relevantminimal_intersection) / len(on_change_mutants)
-        percent_change_in_all = len(minimal_relevant_minimal_change_intersection) / len(on_change_mutants)
-
-        mutants_just_on_change = len([mutant for mutant in on_change_mutants if mutant not in minimal_change_intersection and mutant not in change_relevantminimal_intersection and mutant not in minimal_relevant_minimal_change_intersection])
-        percent_change_rest = mutants_just_on_change / len(on_change_mutants)
-
-        # print(percent_change_in_minimal)
-        # print(percent_change_in_relevant_minimal)
-        # print(percent_change_in_all)
-        # print(percent_change_rest)
-
-        # percentages for minimalRelevant
-        percent_relevantminimal_in_minimal = len(minimal_relevantminimal_intersection) / len(minimal_relevant_mutants)
-        percent_relevantminimal_in_change = len(change_relevantminimal_intersection) / len(minimal_relevant_mutants)
-        percent_relevantminimal_in_all = len(minimal_relevant_minimal_change_intersection) / len(minimal_relevant_mutants)
-
-        percent_relevantminimal_rest = len([mutant for mutant in minimal_relevant_mutants if mutant not in minimal_relevantminimal_intersection and mutant not in change_relevantminimal_intersection and mutant not in minimal_relevant_minimal_change_intersection]) / len(minimal_relevant_mutants)
-
-        # print(percent_relevantminimal_in_minimal)
-        # print(percent_relevantminimal_in_change)
-        # print(percent_relevantminimal_in_all)
-        # print(percent_relevantminimal_rest)
-
-        venn_file_output = output_path + "/venn_diagram_data.csv"
-        with open(venn_file_output, "a+") as output_file:
-            if os.stat(venn_file_output).st_size == 0:
+            for m in all_granularity_level:
+                subsuming = "1" if m in minimal_mutants else "0"
+                relevant_subsuming = "1" if m in minimal_relevant_mutants else "0"
+                change = "1" if m in on_change_mutants else "0"
+                hard_to_kill = "1" if m.hard_to_kill_score() <= 0.10 else "0"
                 output_file.write(
-                    "commit,all_granularity,relevant_mutants,change_mutants,minimal_relevant,minimal_mutants,"
-                    "minimal_change_intersection,minimal_relevant-minimal_intersection,change_relevant-minimal_intersection,minimal_relevant-minimal_change_intersection,"
-                    "percent_minimal_in_change,percent_minimal_in_relevant_minimal,percent_minimal_in_all,percent_minimal_rest,"
-                    "percent_change_in_minimal,percent_change_in_relevant_minimal,percent_change_in_all,percent_change_rest,"
-                    "percent_relevant-minimal_in_minimal,percent_relevant-minimal_in_change,percent_relevant-minimal_in_all,percent_relevant-minimal_rest\n")
-
-            output_file.write("{},{},{},{},{},{},{},{},{},{},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f}".format(
-                _index, len(all_granularity_level), len(relevant_mutants), len(on_change_mutants), len(minimal_relevant_mutants), len(minimal_mutants),
-                len(minimal_change_intersection), len(minimal_relevantminimal_intersection),len(change_relevantminimal_intersection),len(minimal_relevant_minimal_change_intersection),
-                                                                        percent_minimal_in_change,percent_minimal_in_relevant_minimal,percent_minimal_in_all,percent_minimal_rest,
-                                                                        percent_change_in_minimal,percent_change_in_relevant_minimal,percent_change_in_all,percent_change_rest,
-                                                                        percent_relevantminimal_in_minimal,percent_relevantminimal_in_change,percent_relevantminimal_in_all, percent_relevantminimal_rest))
+                    "{mid},{subsuming},{relevant_subsuming},{change},{hard_to_kill}".format(mid=str(str(m.mutant_ID) + str(_index)), subsuming=subsuming,
+                                                                 relevant_subsuming=relevant_subsuming, change=change, hard_to_kill=hard_to_kill))
+                output_file.write("\n")
 
 
-
-            output_file.write("\n")
+        # # print("All fom mutants: {number}".format(number=len(all_fom_mutants)))
+        # # print("All granularity: {number}".format(number=len(all_granularity_level)))
+        # # print("Relevant mutants: {number}".format(number=len(relevant_mutants)))
+        # # print("Not relevant mutants: {number}".format(number=len(not_relevant_mutants)))
+        # # print("On change mutants: {number}".format(number=len(on_change_mutants)))
+        # # print("Minimal relevant mutants: {number}".format(number=len(minimal_relevant_mutants)))
+        # # print("Minimal mutants: {number}".format(number=len(minimal_mutants)))
+        #
+        # # print("\n")
+        #
+        # minimal_change_intersection = set(minimal_mutants).intersection(set(on_change_mutants))
+        # minimal_relevantminimal_intersection = set(minimal_mutants).intersection(set(minimal_relevant_mutants))
+        # change_relevantminimal_intersection = set(on_change_mutants).intersection(minimal_relevant_mutants)
+        #
+        # # minimal_relevant_minimal_change_intersection = minimal_change_intersection.intersection(minimal_relevantminimal_intersection).intersection(change_relevantminimal_intersection)
+        # d = [on_change_mutants, minimal_relevant_mutants, minimal_mutants]
+        # minimal_relevant_minimal_change_intersection = set.intersection(*[set(x) for x in d])
+        #
+        # print(len(minimal_change_intersection))
+        # print(len(minimal_relevantminimal_intersection))
+        # print(len(change_relevantminimal_intersection))
+        # print(len(minimal_relevant_minimal_change_intersection))
+        #
+        # # percentages for minimal
+        # percent_minimal_in_change = len(minimal_change_intersection) / len(minimal_mutants)
+        # percent_minimal_in_relevant_minimal = len(minimal_relevantminimal_intersection) / len(minimal_mutants)
+        # percent_minimal_in_all = len(minimal_relevant_minimal_change_intersection) / len(minimal_mutants)
+        #
+        # percent_minimal_rest = len([mutant for mutant in minimal_mutants if mutant not in minimal_change_intersection and mutant not in minimal_relevantminimal_intersection and mutant not in minimal_relevant_minimal_change_intersection]) / len(minimal_mutants)
+        #
+        # # print(percent_minimal_in_change)
+        # # print(percent_minimal_in_relevant_minimal)
+        # # print(percent_minimal_in_all)
+        # # print(percent_minimal_rest)
+        #
+        # # percentages for change
+        # percent_change_in_minimal = len(minimal_change_intersection) / len(on_change_mutants)
+        # percent_change_in_relevant_minimal = len(change_relevantminimal_intersection) / len(on_change_mutants)
+        # percent_change_in_all = len(minimal_relevant_minimal_change_intersection) / len(on_change_mutants)
+        #
+        # mutants_just_on_change = len([mutant for mutant in on_change_mutants if mutant not in minimal_change_intersection and mutant not in change_relevantminimal_intersection and mutant not in minimal_relevant_minimal_change_intersection])
+        # percent_change_rest = mutants_just_on_change / len(on_change_mutants)
+        #
+        # # print(percent_change_in_minimal)
+        # # print(percent_change_in_relevant_minimal)
+        # # print(percent_change_in_all)
+        # # print(percent_change_rest)
+        #
+        # # percentages for minimalRelevant
+        # percent_relevantminimal_in_minimal = len(minimal_relevantminimal_intersection) / len(minimal_relevant_mutants)
+        # percent_relevantminimal_in_change = len(change_relevantminimal_intersection) / len(minimal_relevant_mutants)
+        # percent_relevantminimal_in_all = len(minimal_relevant_minimal_change_intersection) / len(minimal_relevant_mutants)
+        #
+        # percent_relevantminimal_rest = len([mutant for mutant in minimal_relevant_mutants if mutant not in minimal_relevantminimal_intersection and mutant not in change_relevantminimal_intersection and mutant not in minimal_relevant_minimal_change_intersection]) / len(minimal_relevant_mutants)
+        #
+        # # print(percent_relevantminimal_in_minimal)
+        # # print(percent_relevantminimal_in_change)
+        # # print(percent_relevantminimal_in_all)
+        # # print(percent_relevantminimal_rest)
+        #
+        # venn_file_output = output_path + "/venn_diagram_data.csv"
+        # with open(venn_file_output, "a+") as output_file:
+        #     if os.stat(venn_file_output).st_size == 0:
+        #         output_file.write(
+        #             "commit,all_granularity,relevant_mutants,change_mutants,minimal_relevant,minimal_mutants,"
+        #             "minimal_change_intersection,minimal_relevant-minimal_intersection,change_relevant-minimal_intersection,minimal_relevant-minimal_change_intersection,"
+        #             "percent_minimal_in_change,percent_minimal_in_relevant_minimal,percent_minimal_in_all,percent_minimal_rest,"
+        #             "percent_change_in_minimal,percent_change_in_relevant_minimal,percent_change_in_all,percent_change_rest,"
+        #             "percent_relevant-minimal_in_minimal,percent_relevant-minimal_in_change,percent_relevant-minimal_in_all,percent_relevant-minimal_rest\n")
+        #
+        #     output_file.write("{},{},{},{},{},{},{},{},{},{},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f},{:0.2f}".format(
+        #         _index, len(all_granularity_level), len(relevant_mutants), len(on_change_mutants), len(minimal_relevant_mutants), len(minimal_mutants),
+        #         len(minimal_change_intersection), len(minimal_relevantminimal_intersection),len(change_relevantminimal_intersection),len(minimal_relevant_minimal_change_intersection),
+        #                                                                 percent_minimal_in_change,percent_minimal_in_relevant_minimal,percent_minimal_in_all,percent_minimal_rest,
+        #                                                                 percent_change_in_minimal,percent_change_in_relevant_minimal,percent_change_in_all,percent_change_rest,
+        #                                                                 percent_relevantminimal_in_minimal,percent_relevantminimal_in_change,percent_relevantminimal_in_all, percent_relevantminimal_rest))
+        #
+        #
+        #
+        #     output_file.write("\n")
 
 
 def write_ms_achieved(output_file, target, commit, mutant_pool, iteration, ms_progression, mutants_picked, limit, chosen_tests):
@@ -219,8 +243,8 @@ if __name__ == '__main__':
         # Simulation on All Mutants
         # Split commits per categories and perform simulation
 
-    # venn_diagram_simulation(data=data_frame, path_to_mutants_data=arguments.path_to_mutants_data, output_path=arguments.output_dir)
+    venn_diagram_simulation(data=data_frame, path_to_mutants_data=arguments.path_to_mutants_data, output_path=arguments.output_dir)
 
-    developer_simulation(data=data_frame, path_to_mutants_data=arguments.path_to_mutants_data, output_path=arguments.output_dir)
+    # developer_simulation(data=data_frame, path_to_mutants_data=arguments.path_to_mutants_data, output_path=arguments.output_dir)
 
 

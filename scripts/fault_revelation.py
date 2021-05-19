@@ -23,6 +23,8 @@ if __name__ == '__main__':
 
     data_frame = pd.read_csv(arguments.statistics_file, index_col="commit_id", thousands=",")
 
+    reveiling_ratis = dict()
+
     for _index, row in data_frame.iterrows():
 
         mutationMatrixPath = arguments.path_to_mutants_data + "/" + row["project_name"] + "/" + _index + "/" + "mutationMatrix.csv"
@@ -34,13 +36,14 @@ if __name__ == '__main__':
         print(row["tests"])
 
         faulty_tests = row["tests"]
-        faulty_tests = faulty_tests.split(",")
+        faulty_tests = faulty_tests.split(";")
         faulty_tests_names = [test.split("::")[-1] for test in faulty_tests]
 
         print(_index)
         all_fom_mutants, all_granularity_level, relevant_mutants, not_relevant_mutants, on_change_mutants, minimal_relevant_mutants_no_change = map_mutants(
             mutants_info_path=mutantsInfoPath, mutation_matrix_path=mutationMatrixPath)
 
+        relevant_mutants = relevant_mutants + on_change_mutants
         minimal_mutants, subsumed_killed_mutants, mutants_killed, equivalent = calculate_minimal_mutants(
             all_granularity_level)
         subsumed_killed_mutants.update(equivalent)
@@ -57,69 +60,119 @@ if __name__ == '__main__':
         print("Minimal relevant: {number}".format(number=len(minimal_relevant_mutants)))
         print("Minimal: {number}".format(number=len(minimal_mutants)))
 
-        matched_all_m = []
-        for mutant in all_granularity_level:
-            for test in mutant.killingTests:
-                if test.split(".")[-1] in faulty_tests_names:
-                    matched_all_m.append(mutant)
+    #     matched_all_m = set()
+    #     for mutant in all_granularity_level:
+    #         for test in mutant.killingTests:
+    #             if test.split(".")[-1] in faulty_tests_names:
+    #                 matched_all_m.add(mutant)
+    #
+    #     print("All Mutants fault triggering mutants: {number}".format(number=len(matched_all_m)))
+    #
+    #     matched_Relevant_m = set()
+    #     for mutant in relevant_mutants:
+    #         for test in mutant.killingTests:
+    #             if test.split(".")[-1] in faulty_tests_names:
+    #                 matched_Relevant_m.add(mutant)
+    #
+    #     print("Relevant fault triggering mutants: {number}".format(number=len(matched_Relevant_m)))
+    #
+    #     matched_mod_m = set()
+    #     for mutant in on_change_mutants:
+    #         for test in mutant.killingTests:
+    #             if test.split(".")[-1] in faulty_tests_names:
+    #                 matched_mod_m.add(mutant)
+    #
+    #     print("Mod fault triggering mutants: {number}".format(number=len(matched_mod_m)))
+    #
+    #     matched_rel_min_m = set()
+    #     for mutant in minimal_relevant_mutants:
+    #         for test in mutant.killingTests:
+    #             if test.split(".")[-1] in faulty_tests_names:
+    #                 matched_rel_min_m.add(mutant)
+    #
+    #     print("Min relevant fault triggering mutants: {number}".format(number=len(matched_rel_min_m)))
+    #
+    #     matched_min_m = set()
+    #     for mutant in minimal_mutants:
+    #         for test in mutant.killingTests:
+    #             if test.split(".")[-1] in faulty_tests_names:
+    #                 matched_min_m.add(mutant)
+    #
+    #     print("Min fault triggering mutants: {number}".format(number=len(matched_min_m)))
+    #
+    #     ratio_over_all = len(matched_all_m) / len(all_granularity_level)
+    #     ratio_over_relevant = len(matched_Relevant_m) / len(relevant_mutants)
+    #     ratio_over_mod = len(matched_mod_m) / len(on_change_mutants)
+    #     reveiling_ratis[_index] = [ratio_over_all, ratio_over_relevant, ratio_over_mod]
+    #     print(ratio_over_all)
+    #     print(ratio_over_relevant)
+    #     print(ratio_over_mod)
+    #
+    # print()
+    #
+    # all = 0
+    # rel = 0
+    # mod = 0
+    # for key, value in reveiling_ratis.items():
+    #     print(key , " -- " ,value)
+    #     all += value[0]
+    #     rel += value[1]
+    #     mod += value[2]
+    #
+    # print("all -- ", all / len(reveiling_ratis.keys()))
+    # print("rel -- ", rel / len(reveiling_ratis.keys()))
+    # print("mod -- ", mod / len(reveiling_ratis.keys()))
 
-        print("All Mutants fault triggering mutants: {number}".format(number=len(matched_all_m)))
-
-        matched_Relevant_m = []
-        for mutant in relevant_mutants:
-            for test in mutant.killingTests:
-                if test.split(".")[-1] in faulty_tests_names:
-                    matched_Relevant_m.append(mutant)
-
-        print("Relevant fault triggering mutants: {number}".format(number=len(matched_Relevant_m)))
-
-        matched_mod_m = []
-        for mutant in on_change_mutants:
-            for test in mutant.killingTests:
-                if test.split(".")[-1] in faulty_tests_names:
-                    matched_mod_m.append(mutant)
-
-        print("Mod fault triggering mutants: {number}".format(number=len(matched_mod_m)))
-
-        matched_rel_min_m = []
-        for mutant in minimal_relevant_mutants:
-            for test in mutant.killingTests:
-                if test.split(".")[-1] in faulty_tests_names:
-                    matched_rel_min_m.append(mutant)
-
-        print("Min relevant fault triggering mutants: {number}".format(number=len(matched_rel_min_m)))
-
-        matched_min_m = []
-        for mutant in minimal_mutants:
-            for test in mutant.killingTests:
-                if test.split(".")[-1] in faulty_tests_names:
-                    matched_min_m.append(mutant)
-
-        print("Min fault triggering mutants: {number}".format(number=len(matched_min_m)))
-        developer_simulation = arguments.output_dir + "/fault_revelation_msT.csv"
+        developer_simulation = arguments.output_dir + "/fault_revelation_ms.csv"
         with open(developer_simulation, "a+") as output_file:
             if os.stat(developer_simulation).st_size == 0:
                 output_file.write(
                     "commit,mutant_pool,percentage,iteration,ms\n")
 
             for pool, name in [(all_fom_mutants, "all"), (relevant_mutants, "relevant"),
-                               (on_change_mutants, "modification"), (minimal_relevant_mutants, "minimal_relevant"),
-                               (minimal_mutants, "minimal")]:
-                for percentage in np.arange(0.01, 1.01, 0.01):
+                               (on_change_mutants, "modification")]:
+                # for to_sample_n in np.arange(0.01, 1.01, 0.01):
+                for to_sample_n in range(1, 100, 1):
+                    n = 0
+                    for iteration in range(1, 1001):
+                        # to_sample = len(pool) * to_sample_n
+                        # to_sample_n = int(round(to_sample))
+                        if to_sample_n >= len(pool):
+                            sampled_pool = pool
+                        else:
+                            sampled_pool = random.sample(pool, to_sample_n)
 
-                    for iteration in range(1, 101):
-                        to_sample = len(pool) * percentage
-                        to_sample_n = int(round(to_sample))
-                        sampled_pool = random.sample(pool, to_sample_n)
+                        killint_test_suite = set()
+                        [[killint_test_suite.add(test) for test in mutant.killingTests] for mutant in sampled_pool]
+
                         sampled_reveiling = set()
-                        for mutant in sampled_pool:
-                            for test in mutant.killingTests:
-                                if test.split(".")[-1] in faulty_tests_names:
-                                    sampled_reveiling.add(mutant)
 
-                        ms = 0
-                        if len(sampled_reveiling) != 0:
-                            ms = len(sampled_reveiling) / len(sampled_pool)
+                        while len(sampled_pool) > 0:
+                            chosen_mutant = random.choice(sampled_pool)
+                            sampled_pool.remove(chosen_mutant)
+                            killing_tests_chosen = chosen_mutant.killingTests
+                            chosen_test = None
+                            if len(killing_tests_chosen) > 0:
+                                chosen_test = random.sample(killing_tests_chosen, 1)[0]
+                                if chosen_test.split(".")[-1] in faulty_tests_names:
+                                    n += 1
+                                    break
+                            if chosen_test is not None:
+                                sampled_pool = [mutant for mutant in sampled_pool
+                                               if chosen_test not in mutant.killingTests]
 
-                        output_file.write("{},{},{},{},{}".format(_index, name, str(round(percentage, 2)), iteration, str(round(ms, 2))))
-                        output_file.write("\n")
+                        # for mutant in sampled_pool:
+                        #     for test in mutant.killingTests:
+                        #         if test.split(".")[-1] in faulty_tests_names:
+                        #             sampled_reveiling.add(mutant)
+
+                        # ms = 0
+                        # if len(sampled_reveiling) != 0:
+                        # if len(sampled_reveiling) != 0:
+                            # ms = zlen(sampled_reveiling) / len(sampled_pool)
+                            # n = n + 1
+
+                    if n != 0:
+                        n = n / 1000
+                    output_file.write("{},{},{},{},{}".format(_index, name, str(round(to_sample_n, 2)), iteration, str(round(n, 2))))
+                    output_file.write("\n")

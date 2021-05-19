@@ -2,15 +2,19 @@ import os
 import sys
 import argparse
 import pandas as pd
-from numpy import mean, std
+import scipy.stats as stats
 
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.max_rows', None)
 pd.set_option('display.width', 2000)
 
 import seaborn as sns
+# sns.set_theme(color_codes=True)
 import matplotlib.pyplot as plt
 import numpy as np
+
+from matplotlib_venn import venn3
+from venn import venn
 
 def scatter_plot(data):
 
@@ -20,6 +24,7 @@ def scatter_plot(data):
     fig.set_figwidth(12)
 
     data = data[data["minimal_mutants"] < 2000]
+    data = data[data["mutants_on_change"] < 350]
 
     axeLeft = sns.scatterplot(data=data, x="relevant_mutants", y="mutants_on_change", ax=axes[0])
     axeMiddle = sns.scatterplot(data=data, x="minimal_relevant_mutants", y="mutants_on_change", ax=axes[1])
@@ -29,17 +34,160 @@ def scatter_plot(data):
     axeLeft.set_xlabel("Relevant Mutants", fontsize=12)
 
     axeMiddle.set_ylabel("Mutants on a change", fontsize=12)
-    axeMiddle.set_xlabel("Minimal Relevant Mutants", fontsize=12)
+    axeMiddle.set_xlabel("Subsuming Relevant Mutants", fontsize=12)
 
-    axeRight.set_ylabel("Minimal Mutants", fontsize=12)
-    axeRight.set_xlabel("Minimal Relevant Mutants", fontsize=12)
+    axeRight.set_ylabel("Subsuming Mutants", fontsize=12)
+    axeRight.set_xlabel("Subsuming Relevant Mutants", fontsize=12)
 
-    plt.savefig(os.path.join("./plots", "Scatter_plot:correlations.pdf"),
-                format='pdf', dpi=1500)
+    # plt.savefig(os.path.join("./plots", "Scatter_plot:correlations_adjusted_v2.pdf"),
+    #             format='pdf', dpi=1500)
 
     # plt.tight_layout()
     plt.show()
     print()
+
+def scatter_plot_2_by_2(data):
+
+    fig, axes = plt.subplots(ncols=2, nrows=3, constrained_layout=True)
+
+    fig.set_figheight(12)
+    fig.set_figwidth(12)
+
+    data = data[data["minimal_mutants"] < 2000]
+    data = data[data["mutants_on_change"] < 350]
+
+    axeUpLeft = sns.scatterplot(data=data, x="relevant_mutants", y="mutants_on_change", ax=axes[0, 0])
+    axeUpRight = sns.scatterplot(data=data, x="not_relevant_mutants", y="mutants_on_change", ax=axes[0, 1])
+    axeDownLeft = sns.scatterplot(data=data, x="minimal_relevant_mutants", y="mutants_on_change", ax=axes[1, 0])
+    axeDownRight = sns.scatterplot(data=data, x="minimal_relevant_mutants", y="minimal_mutants", ax=axes[1, 1])
+    axeDownDownLeft = sns.scatterplot(data=data, x="relevant_mutants", y="not_relevant_mutants", ax=axes[2, 1])
+
+    """
+    ax1 = plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
+    ax2 = plt.subplot2grid((2,6), (0,2), colspan=2)
+    ax3 = plt.subplot2grid((2,6), (0,4), colspan=2)
+    ax4 = plt.subplot2grid((2,6), (1,1), colspan=2)
+    ax5 = plt.subplot2grid((2,6), (1,3), colspan=2)
+    """
+
+    axeUpLeft.set_ylabel("Mutants on a change", fontsize=12)
+    axeUpLeft.set_xlabel("Relevant Mutants", fontsize=12)
+    axeUpRight.set_ylabel("Mutants on a change", fontsize=12)
+    axeUpRight.set_xlabel("Not Relevant Mutants", fontsize=12)
+
+    axeDownLeft.set_ylabel("Mutants on a change", fontsize=12)
+    axeDownLeft.set_xlabel("Subsuming Relevant Mutants", fontsize=12)
+
+    axeDownRight.set_ylabel("Subsuming Mutants", fontsize=12)
+    axeDownRight.set_xlabel("Subsuming Relevant Mutants", fontsize=12)
+
+    axeDownDownLeft.set_ylabel("Not Relevant Mutants", fontsize=12)
+    axeDownDownLeft.set_xlabel("Relevant Mutants", fontsize=12)
+
+    fig.delaxes(axes[2, 0])
+
+    # plt.savefig(os.path.join("./plots", "Scatter_plot:correlations_all_plots.pdf"),
+    #             format='pdf', dpi=1200)
+    # plt.tight_layout()
+    plt.show()
+    print()
+
+
+def scatter_plot_joint_plot(data):
+    # fig, axes = plt.subplots(ncols=2, nrows=3, constrained_layout=True)
+    #
+    # fig.set_figheight(12)
+    # fig.set_figwidth(12)
+
+    data = data[data["minimal_mutants"] < 2000]
+    data = data[data["mutants_on_change"] < 350]
+
+    # from scipy import stats
+    # def r2(x, y):
+    #     return stats.pearsonr(x, y)[0] ** 2
+
+    for dict in [{ "X_name" : "relevant_mutants",
+                    "X_label" : "Relevant Mutants",
+                     "Y_name" : "mutants_on_change",
+                        "Y_label" : "Mutants within a change"},
+                         {"X_name": "not_relevant_mutants",
+                          "X_label": "Not Relevant Mutants",
+                          "Y_name": "mutants_on_change",
+                          "Y_label": "Mutants within a change"},
+                         {"X_name": "minimal_relevant_mutants",
+                          "X_label": "Subsuming Relevant Mutants",
+                          "Y_name": "mutants_on_change",
+                          "Y_label": "Mutants within a change"},
+                         {"X_name": "minimal_relevant_mutants",
+                          "X_label": "Subsuming Relevant Mutants",
+                          "Y_name": "minimal_mutants",
+                          "Y_label": "Subsuming Mutants"},
+                         {"X_name": "relevant_mutants",
+                          "X_label": "Relevant Mutants",
+                          "Y_name": "not_relevant_mutants",
+                          "Y_label": "Not Relevant Mutants"}
+                 ]:
+        axe = sns.jointplot(data=data, x=dict["X_name"], y=dict["Y_name"],
+                              kind="reg")
+
+        axe.set_axis_labels(xlabel=dict["X_label"], ylabel=dict["Y_label"], fontsize=12)
+
+        pr, pp = stats.pearsonr(data[dict["X_name"]], data[dict["Y_name"]])
+        kr, kp = stats.kendalltau(data[dict["X_name"]], data[dict["Y_name"]])
+        # if you choose to write your own legend, then you should adjust the properties then
+        phantom, = axe.ax_joint.plot([], [], linestyle="", alpha=0)
+        # here graph is not a ax but a joint grid, so we access the axis through ax_joint method
+
+        label = 'pearson: r={:f}, p={:f}\nkendall: r={:f}, p={:f}'.format(pr, pp, kr, kp)
+        label_pearson = 'r={:f}, p={:f}'.format(pr,pp)
+        axe.ax_joint.legend([phantom], [label])
+
+        plt.savefig(os.path.join("./plots", f"Scatter_plot:correlations_{dict['X_name']}-{dict['Y_name']}.pdf"),
+                    format='pdf', dpi=1500)
+        # plt.tight_layout()
+        plt.show()
+        print()
+
+    # axeUpLeft = sns.jointplot(data=data, x="relevant_mutants", y="mutants_on_change", marker="+",
+    #                           kind="reg")
+    # axeUpRight = sns.jointplot(data=data, x="not_relevant_mutants", y="mutants_on_change", marker="+",
+    #                            kind="reg")
+    # axeDownLeft = sns.jointplot(data=data, x="minimal_relevant_mutants", y="mutants_on_change",
+    #                             marker="+", kind="reg")
+    # axeDownRight = sns.jointplot(data=data, x="minimal_relevant_mutants", y="minimal_mutants",
+    #                              marker="+", kind="reg")
+    # axeDownDownLeft = sns.jointplot(data=data, x="relevant_mutants", y="not_relevant_mutants",
+    #                                 marker="+", kind="reg")
+
+    """
+    ax1 = plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
+    ax2 = plt.subplot2grid((2,6), (0,2), colspan=2)
+    ax3 = plt.subplot2grid((2,6), (0,4), colspan=2)
+    ax4 = plt.subplot2grid((2,6), (1,1), colspan=2)
+    ax5 = plt.subplot2grid((2,6), (1,3), colspan=2)
+    """
+
+
+    # axeUpLeft.set_xlabel("Relevant Mutants", fontsize=12)
+    # axeUpRight.set_ylabel("Mutants on a change", fontsize=12)
+    # axeUpRight.set_xlabel("Not Relevant Mutants", fontsize=12)
+    #
+    # axeDownLeft.set_ylabel("Mutants on a change", fontsize=12)
+    # axeDownLeft.set_xlabel("Subsuming Relevant Mutants", fontsize=12)
+    #
+    # axeDownRight.set_ylabel("Subsuming Mutants", fontsize=12)
+    # axeDownRight.set_xlabel("Subsuming Relevant Mutants", fontsize=12)
+    #
+    # axeDownDownLeft.set_ylabel("Not Relevant Mutants", fontsize=12)
+    # axeDownDownLeft.set_xlabel("Relevant Mutants", fontsize=12)
+
+    # fig.delaxes(axes[2, 0])
+
+    # plt.savefig(os.path.join("./plots", "Scatter_plot:correlations_TEST.pdf"),
+    #             format='pdf', dpi=1200)
+    # # plt.tight_layout()
+    # plt.show()
+    # print()
 
 
 def box_plot_stacked(data, output_dir):
@@ -58,6 +206,16 @@ def box_plot_stacked(data, output_dir):
     data["ration_of_relevant"] = data['relevant_mutants'] / data["total_mutants"]
     data["not_relevant"] = 1 - data["ratio_of_change"] - data["ration_of_relevant"]
 
+    # 1) sorted with the ratio of change size,
+    data = data.sort_values(by='ratio_of_change', ascending=True, ignore_index=True)
+    # print(data.head(10))
+    # 2) sorted with ratio of relevant mutants and
+    # data = data.sort_values(by='ration_of_relevant', ascending=True, ignore_index=True)
+    # 3) ratio of non-relevant mutants
+    # data = data.sort_values(by='not_relevant', ascending=True, ignore_index=True)
+
+
+
     # STACKED BARS
 
     fig, axes = plt.subplots(nrows=1, ncols=1)
@@ -66,7 +224,7 @@ def box_plot_stacked(data, output_dir):
     fig.set_figwidth(12)
 
     b_top = axes.bar(x=data.index, height=data['ratio_of_change']+data['ration_of_relevant']+data["not_relevant"], facecolor='lightblue', alpha=0.8, label='Ratio of not relevant mutants')
-    b_middle = axes.bar(x=data.index, height=data['ratio_of_change']+data['ration_of_relevant'], facecolor='#ea4335', alpha=0.8, label='Ratio of change size')
+    b_middle = axes.bar(x=data.index, height=data['ratio_of_change']+data['ration_of_relevant'], facecolor='#ea4335', alpha=0.8, label='Ratio of mutants within a change')
     b_bottom = axes.bar(x=data.index, height=data['ration_of_relevant'], facecolor='palegreen', alpha=0.8, label='Ratio of relevant mutants')
 
     # pattern parameter-> , hatch = 'x'
@@ -76,11 +234,12 @@ def box_plot_stacked(data, output_dir):
     axes.legend(loc='upper right')
 
     plt.xlim(0, len(data.index)+ 1)
-    plt.xticks(np.arange(np.min(data.index), np.max(data.index), 5), fontsize=5, rotation=45)
+    # plt.xticks(np.arange(np.min(data.index), np.max(data.index), 1), fontsize=5, rotation=45, color="w")
+    plt.xticks(np.arange(np.min(data.index), np.max(data.index), 1), fontsize=1, color="w")
     plt.yticks(np.arange(0,1, 0.1))
 
-    plt.savefig(os.path.join(output_dir, "Box_plot:Distribution_test2.pdf"),
-                format='pdf', dpi=1200)
+    # plt.savefig(os.path.join(output_dir, "Box_plot:Distribution_v1.pdf"), format='pdf', dpi=1200)
+    plt.savefig(os.path.join(output_dir, "Box_plot:Distribution_sort_change.pdf"), format='pdf', dpi=1200)
     plt.tight_layout()
     plt.show()
     print()
@@ -147,17 +306,17 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
 
     print(data.columns)
 
-    data['Technique'] = data['Technique'].replace({ "All" : "Random" })
+    data['Technique'] = data['Technique'].replace({ "All" : "Random", "Minimal_Relevant" : "Minimal Relevant" })
 
     # data = data.loc[data['Technique'].isin(["Random", "Predicted", "Minimal", "Relevant"])]
     # data = data.loc[data['Technique'].isin(["Random", "Minimal", "Relevant", "Minimal_Relevant"])]
-    data = data.loc[data['Technique'].isin(["Random", "Relevant", "Minimal_Relevant"])]
+    data = data.loc[data['Technique'].isin(["Random", "Relevant", "Minimal Relevant"])]
 
     stats = data.describe(include='all').loc[["mean", "std"]]
     print(stats)
 
     # calculate summary statistics
-    data_mean, data_std = mean(data["Tests_picked"]), std(data["Tests_picked"])
+    data_mean, data_std = np.mean(data["Tests_picked"]), np.std(data["Tests_picked"])
     print("Mean:" , data_mean)
     print("Std:" , data_std)
     # identify outliers
@@ -177,7 +336,7 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     # print("Range: {}-{}".format(np.min(outliers), np.max(outliers)))
 
     print(data.dtypes)
-    data = data.loc[data["Tests_picked"] < 2500]
+    data = data.loc[data["Tests_picked"] < 2000]
     print("After")
     min, max = np.min(data["Tests_picked"]), np.max(data["Tests_picked"])
     print("Min: ", min)
@@ -188,11 +347,11 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     # Share both X and Y axes with all subplots
     # fig, axes = plt.subplots(ncols=2, nrows=1, sharex='all', sharey='all')
     fig, axes = plt.subplots(ncols=1, nrows=1)
-    fig.set_figheight(12)
-    fig.set_figwidth(10)
+    fig.set_figwidth(12)
+    fig.set_figheight(8)
     # fig.add_subplot(111, frameon=False)
 
-    my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', 'Minimal_Relevant': 'turquoise'}
+    my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', 'Minimal Relevant': 'firebrick'}
     # my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', "Minimal": "firebrick"}
 
     # m_picked = sea.boxplot(x="Technique", y="Mutants_Picked", data=data, ax=axes[0], palette=my_pal)
@@ -204,11 +363,12 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     # m_picked.set_xlabel("", fontsize=12)
 
     t_picked = sns.boxplot(x="Technique", y="Tests_picked", data=data, ax=axes, palette=my_pal)
-    t_picked.set_ylabel("Number of tests", fontsize=18)
-    t_picked.tick_params(labelsize=15, axis='x')
+    t_picked.set_ylabel("Number of tests", fontsize=22)
+    t_picked.tick_params(labelsize=22, axis='x')
     t_picked.tick_params(labelsize=22, axis='y')
-    t_picked.set_title("Computation effort")
-    t_picked.set_xlabel("", fontsize=15)
+    t_picked.set_title("Computation effort for MS", fontsize=26)
+    t_picked.set_xlabel("", fontsize=22)
+    t_picked.set_alpha(0.5)
     # t_picked.set_yticks(np.arange(0, max, 100))
 
     # t_picked.margins(x=0.0)
@@ -243,9 +403,9 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     # fig.text(0.55, 0.01, 'Selections', ha='center', va='center')
     # fig.text(0.01, 0.5, 'common ylabel', ha='center', va='center', rotation='vertical')
 
-    plt.savefig(os.path.join(output_dir, "Box_plot:{}:{}.pdf".format('Simulation', "computational_effort")),
+    plt.savefig(os.path.join(output_dir, "Box_plot:{}:{}.pdf".format('Simulation', "computational_effort_v2")),
                                              format='pdf',
-                                             dpi=1500)
+                                             dpi=1200)
     # plt.savefig(os.path.join(dir_path,"{}_{}.eps".format('Boxplot', "human_effort_v2")),
     #                                          format='eps',
     #                                          dpi=1200)
@@ -274,12 +434,14 @@ def grouped_box_plots_developer_simulation(data, output_dir):
     # data.mutant_pool = data.mutant_pool.replace({"all": "Random", "relevant": "Relevant", "modification": "Modification"})
 
     # data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Relevant"])]
-    data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Minimal Relevant"])]
+    # data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Minimal Relevant"])]
+    data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Minimal Relevant", "Relevant"])]
     print(data.mutant_pool.unique())
 
     commits = data.commit.unique()
 
-    my_pal = {'Random': 'cornflowerblue', 'Minimal Relevant': 'firebrick', 'Modification': 'pink'}
+    # my_pal = {'Random': 'cornflowerblue', 'Minimal Relevant': 'firebrick', 'Modification': 'pink'}
+    my_pal = {'Random': 'cornflowerblue', 'Minimal Relevant': 'firebrick', 'Modification': 'pink', 'Relevant': 'palegreen'}
     # my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', 'Modification': 'pink', "Minimal Relevant": "deepskyblue"}
     # for commit in commits:
     #     df_commit = data[data["commit"] == commit]
@@ -290,32 +452,32 @@ def grouped_box_plots_developer_simulation(data, output_dir):
     # hatches = ['/', '+', '//', '-', 'x', '\\', '*', 'o', 'O']
     # hatches = ['/', '*', 'x', "O"]
     # hatches = ['/', '*', "x"]
-    hatches = ['/',"x", '*',]
+    hatches = ['/',"*", 'x', "O"]
     i = 0
     for bar in b.patches:
-        if i == 3:
+        if i == 4:
             i = 0
         bar.set_hatch(hatches[i])
         i += 1
 
     i = 0
     for patch in b.artists:
-        if i == 3:
+        if i == 4:
             i = 0
         patch.set_hatch(hatches[i])
         i += 1
 
     b.set_alpha(0.5)
     b.set_xlabel("Number of selected mutants", fontsize=22)
-    b.set_ylabel("Killed Ratio of Mutants - %", fontsize=22)
+    b.set_ylabel("RMS - %", fontsize=22)
     b.tick_params(labelsize=22)
-    b.set_title("Progression of Minimal Relevant Mutation Score", fontsize=26)
+    b.set_title("Progression of Relevant Mutation Score", fontsize=26)
     # b.set_title(commit)
     b.legend(loc="lower right", fontsize=26)
-    plt.savefig(os.path.join(output_dir,
-                             "Box_plot:{}:{}.pdf".format('Simulation', "minimal_relevant_ms")),
-                format='pdf',
-                dpi=1200)
+    # plt.savefig(os.path.join(output_dir,
+    #                          "Box_plot:{}:{}.pdf".format('Simulation', "relevant_ms_v2")),
+    #             format='pdf',
+    #             dpi=1200)
     # plt.savefig(os.path.join(dir_path,
     #                          "{}_{}.eps".format('Boxplot', "progression_MS_prediction_v2")),
     #             format='eps',
@@ -326,14 +488,74 @@ def grouped_box_plots_developer_simulation(data, output_dir):
 
 
 def lineplot(data, output_dir):
+    data = data.loc[data.mutant_pool.isin(["all", "relevant"])]
+    data = data[data["percentage"] <= 23]
     sns.lineplot(data=data, x="percentage", y="ms", hue="mutant_pool")
     plt.savefig(os.path.join(output_dir,
-                             "Line_plot:{}:{}.pdf".format('Simulation', "fault_revelation_v2")),
+                             "Line_plot:{}:{}.pdf".format('Simulation', "fault_revelation")),
                 format='pdf',
                 dpi=1200)
     plt.tight_layout()
     plt.show()
 
+def venn_diagram(data, output_dir):
+    # "mid", "subsuming", "relevant_subsuming", "change", "hard_to_kill"
+    relevant_subsuming = set(data["mid"][data['relevant_subsuming'] == 1].tolist())
+    change = set(data["mid"][data['change'] == 1].tolist())
+    subsumingMutants = set(data["mid"][data['subsuming'] == 1].tolist())
+    hard_to_kill = set(data["mid"][data['hard_to_kill'] == 1].tolist())
+
+    print(len(relevant_subsuming))
+    print(len(change))
+    print(len(subsumingMutants))
+    print(len(hard_to_kill))
+
+    mutants = {'Subsuming Mutants': subsumingMutants, 'Subsuming Relevant Mutants': relevant_subsuming,
+               'Mutants On Change': change, "Hard-To-Kill Mutants" : hard_to_kill}
+
+    # set_labels = ["Subsuming Mutants", "Subsuming Relevant Mutants", "Mutants On Change", "Hard-To-Kill Mutants"]
+    set_labels = ["Subsuming Mutants", "Subsuming Relevant Mutants", "Mutants On Change"]
+    # set_labels = ["Hard-To-Kill Mutants", "Subsuming Relevant Mutants", "Mutants On Change"]
+
+    a = list(subsumingMutants)
+    b = list(relevant_subsuming)
+    c = list(change)
+    d = list(hard_to_kill)
+
+    total = len(list(set().union(a,b,c)))
+    # total = len(subsumingMutants)
+    fig = plt.figure(figsize=(12, 8))
+    # venn3(subsets=(only_a, only_b, a_b, only_c, a_c, b_c, a_b_c), set_labels=set_labels, subset_label_formatter=lambda x: f"{(x/total):1.0%}")
+    # out = venn3(subsets=[subsumingMutants, relevant_subsuming, change], set_labels=set_labels, subset_label_formatter=lambda x: str(round((x/total)*100,2))+"%")
+    out = venn3(subsets=[subsumingMutants, relevant_subsuming, change], set_labels=set_labels)
+    for text in out.set_labels:
+        text.set_fontsize(18)
+    for text in out.subset_labels:
+        if float(text._text.strip('%')) > 1:
+            text.set_fontsize(18)
+    plt.savefig(os.path.join(output_dir,
+                             "Venn_diagram:{}:{}.pdf".format('Categories', "numbers")),
+                format='pdf',
+                dpi=1200)
+    plt.tight_layout()
+    plt.show()
+
+    # fig = plt.figure(figsize=(12, 8))
+    # venn(mutants, fmt="{percentage:.2f}%", legend_loc='upper left', ax=plt.axes())
+    # plt.savefig(os.path.join(output_dir,
+    #                          "Venn_diagram:{}:{}.pdf".format('4_Categories', "percentages")),
+    #             format='pdf',
+    #             dpi=1200)
+    # plt.tight_layout()
+    # plt.show()
+
+
+def pie_plot(output_dir):
+    colors = ['#F92969', '#FACA0C', '#17C37B', '#D9DFEB']
+    size_of_groups = [1,2,3,4]
+    my_pie, _, _ = plt.pie(size_of_groups, radius=1.2, colors=colors, autopct="%.1f%%")
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(description="Script to perform statistics")
@@ -347,7 +569,10 @@ if __name__ == '__main__':
     dataframe = pd.read_csv(filepath_or_buffer=arguments.path_to_data_file, thousands=",")
 
     # scatter_plot(data=dataframe)
+    # scatter_plot_joint_plot(data=dataframe)
     # box_plot_stacked(data=dataframe, output_dir=arguments.output_dir)
-    # grouped_box_plots_developer_simulation(data=dataframe, output_dir=arguments.output_dir)
+    # pie_plot(output_dir=arguments.output_dir)
+    grouped_box_plots_developer_simulation(data=dataframe, output_dir=arguments.output_dir)
     # grouped_box_plots_computation_effort_simulation(data=dataframe, output_dir=arguments.output_dir)
-    lineplot(data=dataframe, output_dir=arguments.output_dir)
+    # lineplot(data=dataframe, output_dir=arguments.output_dir)
+    # venn_diagram(data=dataframe, output_dir=arguments.output_dir)

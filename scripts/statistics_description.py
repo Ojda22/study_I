@@ -3,11 +3,16 @@ import sys
 import argparse
 import pandas as pd
 
+pd.options.display.float_format = "{:.2f}".format
+
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.max_rows', None)
 pd.set_option('display.width', 2000)
 
 import scipy.stats.stats as ss
+
+import matplotlib.pyplot as plt
+import seaborn as sea
 
 
 def descriptive_information(data):
@@ -65,6 +70,36 @@ def agregation_functions(data):
 
     # df = pd.DataFrame(columns=["Mutants", "Commits", "Index"], data=[])
 
+
+def agregation_mutants(data):
+    print(data.describe())
+
+    # print(data.groupby(["total_hunks"])["commit"].count())
+    grouped_relevant = data.groupby(["total_hunks"])["minimal_relevant_mutants"].sum().reset_index()
+    grouped_commits = data.groupby(["total_hunks"])["commit"].count().reset_index()
+    grouped_relevant["commits"] = grouped_commits.commit
+    merged = pd.DataFrame(grouped_relevant)
+    print(merged)
+    merged.to_csv("./aggregation_minimal_relevant.csv", index=False, sep=",", header=True)
+
+    # grouped_minimal_relevant = data.groupby(["total_hunks"])["minimal_relevant_mutants"].sum().reset_index()
+    # grouped_relevant_df = pd.DataFrame(grouped_relevant[grouped_relevant.total_hunks <= 20])
+    # grouped_minimal_relevant_df = pd.DataFrame(grouped_minimal_relevant[grouped_minimal_relevant.total_hunks <= 20])
+    #
+    # plt.figure(figsize=(12,8))
+    #
+    # chart = sea.lineplot(x='total_hunks', y='relevant_mutants', data=grouped_relevant_df,
+    #                      markers=True)
+    # chart.set(ylabel='# Of Commit Relevant Mutants', xlabel="Hunks")
+    # import numpy as np
+    # z = np.polyfit(grouped_relevant_df.total_hunks, grouped_relevant_df.relevant_mutants, 1)
+    # p = np.poly1d(z)
+    # plt.plot(grouped_relevant_df.total_hunks, p(grouped_relevant_df.total_hunks), c="b", ls=":")
+    #
+    # plt.show()
+    # print(grouped_minimal_relevant_df)
+
+
 def fault_revelation(data):
     print(data.describe())
     print(data.columns)
@@ -90,7 +125,7 @@ def fault_revelation(data):
             else:
                 ms = exists / (exists + does_not)
 
-            data_map.append({"pool" : pool, "percentage" : percentage, "ms" : ms})
+            data_map.append({"pool": pool, "percentage": percentage, "ms": ms})
 
     print(data_map)
 
@@ -99,13 +134,101 @@ def fault_revelation(data):
     print(data)
     print()
 
+
 def agregation_functions_mutants_operators(data):
     # data.columns = data.columns.to_series().apply(lambda x: x.strip().split("mutators.")[-1])
 
     data["Mutant_Type"] = data["Mutant_Type"].apply(lambda x: x.strip().split("mutators.")[-1])
-
     print(data.groupby(["Mutant_Type"])["Mutants"].sum())
     print()
+    print("======== Minimal RELEVANT MUTANTS +++++")
+    print()
+    print(data.groupby(["Mutant_Type"])["Minimal_Mutants"].sum())
+
+    print("======== ALL MUTANTS +++++")
+    print()
+    print(data.groupby(["Mutant_Type"])["All_Mutants"].sum())
+
+    print()
+
+
+def features_distribution(dataframe):
+    print(len(dataframe))
+    dataframe = dataframe.drop_duplicates(subset=["Project", "Mutator", "SourceFile", "MutatedClass", "MutatedMethod", "LineNumber", "Index", "Block", "MethodDescription"], keep='last').reset_index(drop=True)
+    print(len(dataframe))
+
+    # distances = ["distanceOfMutantAndPatchInSourceCode", "distanceOfMutantAndPatchInCFG",
+    #              "numberOfVariablesUsedInChange_DependsOnMutant", "numberOfVariablesUsedInChange_MutantDependsOn",
+    #              "BlockDepth", "CfgDepth", "CfgPredNum", "CfgSuccNum", "NumOfInstructionsInBlock", "NumOutDataDeps",
+    #              "NumInDataDeps", "NumOutCtrlDeps", "NumInCtrlDeps", "xAstNumberOfParens", "yAstNumberOfParens",
+    #              "xAstNumberOfChildren", "yAstNumberOfChildren"]
+
+    distances = ["CfgDepth", "NumOutDataDeps", "NumInDataDeps", "NumOutCtrlDeps", "NumInCtrlDeps"]
+
+    test_df = pd.DataFrame()
+
+    for feature in distances:
+        print(feature)
+        df = dataframe[[feature, "Relevant"]]
+        # relevantData = df.loc[(df[feature] > 0) & (df['Relevant'] == 1)]
+        a = pd.Series((df.loc[(df['Relevant'] == 1)][feature]).to_list(), name=f"R_{feature}")
+        # not_relevantData = df.loc[(df[feature] > 0) & (df['Relevant'] == 0)]
+        b = pd.Series((df.loc[(df['Relevant'] == 0)][feature]).to_list(), name=f"N_{feature}")
+        test_df = pd.concat([test_df, a, b], axis=1).dropna()
+
+        # print("====== RELEVANT ")
+        # print()
+        # print(relevantData.describe())
+        # print("====== NOT RELEVANT ")
+        # print()
+        # print(not_relevantData.describe())
+
+    # calculate the correlation matrix
+    corr = test_df.corr()
+    print(corr)
+
+    indexes = [v for v in corr.index.to_list() if v.startswith("N_")]
+    columns = [v for v in corr.index.to_list() if v.startswith("R_")]
+    # print(corr[str(corr.index).startswith("R")].index)
+    corr_extent = corr.drop(index=indexes, columns=columns)
+
+    plt.figure(figsize=(15, 12))
+
+    # Colors
+    cmap = sea.diverging_palette(500, 10, as_cmap=True)
+
+    import numpy as np
+    # remove the top right triange - duplicate information
+    # mask = np.zeros_like(corr, dtype=np.bool)
+    # mask[np.triu_indices_from(mask)] = True
+    # Getting the Upper Triangle of the co-relation matrix
+    # mask = np.triu(corr)
+
+    # plot the heatmap
+    ans = sea.heatmap(corr,
+                xticklabels=corr.index,
+                yticklabels=corr.columns, linewidths=1, cmap=cmap, center=0, annot=True)
+    loc, labels = plt.xticks()
+    ans.set_xticklabels(labels, rotation=35)
+    plt.savefig(os.path.join("/Users/milos.ojdanic/phd_workspace/Mutants_CI/relevantMutant_Milos/study_I/plots",
+                             "Heatmap:{}:{}.pdf".format('Mutants', "properties")),
+                format='pdf',
+                dpi=1500)
+    plt.tight_layout()
+    plt.show()
+
+    # for feature in distances:
+    #     print()
+    #     print(feature)
+    #     df = dataframe[[feature, "Relevant", "Minimal"]]
+    #     minimal_relevantData = df.loc[(df[feature] > 0) & (df['Relevant'] == 1) & (df['Minimal'] == 1)]
+    #     minimal_not_relevantData = df.loc[(df[feature] > 0) & (df['Relevant'] == 0) & (df['Minimal'] == 1)]
+    #     print("====== MINIMAL RELEVANT ")
+    #     print()
+    #     print(minimal_relevantData.describe())
+    #     print("====== MINIMAL NOT RELEVANT ")
+    #     print()
+    #     print(minimal_not_relevantData.describe())
 
 
 if __name__ == '__main__':
@@ -117,10 +240,13 @@ if __name__ == '__main__':
 
     arguments = parser.parse_args()
     dataframe = pd.read_csv(filepath_or_buffer=arguments.path_to_data_file, thousands=",")
-    print()
+    # print()
 
     # descriptive_information(data=dataframe)
     # calculate_correlation(data=dataframe)
     # agregation_functions(data=dataframe)
+    # agregation_mutants(data=dataframe)
     # agregation_functions_mutants_operators(data=dataframe)
-    fault_revelation(data=dataframe)
+    # fault_revelation(data=dataframe)
+    features_distribution(dataframe=dataframe)
+    print("test")

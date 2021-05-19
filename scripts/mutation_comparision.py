@@ -23,12 +23,18 @@ class Mutant(object):
         self.mutatedMethod = ""
         self.methodDescription = ""
         self.killingTests = frozenset()
+        self.succidingTests = frozenset()
         self.prediction = 0.0
         self.mutant_ID = 0
         self.is_relevant = 0
         self.is_on_change = 0
         self.is_minimal = 0
         self.is_not_relevant = 0
+
+    def hard_to_kill_score(self) -> float:
+        if len(self.killingTests) == 0:
+            return 1
+        return len(self.killingTests) / (len(self.killingTests) + len(self.succidingTests))
 
     def to_string(self) -> str:
         return "{} , {} , {} , {} , {} , {} , {}".format(
@@ -90,6 +96,7 @@ def map_mutants(mutants_info_path, mutation_matrix_path):
         mutant = Mutant()
         mutant.mutant_ID = _index
         mutant.killingTests = frozenset([r[0] for r in row.iteritems() if r[1] == 1])
+        mutant.succidingTests = frozenset([r[0] for r in row.iteritems() if r[1] == 0])
         mutant_info = mutants_info_df.loc[[_index]]
         mutant.is_relevant = mutant_info["Relevant"].iloc[0]
         mutant.is_not_relevant = mutant_info["Not_relevant"].iloc[0]

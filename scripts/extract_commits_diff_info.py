@@ -120,6 +120,45 @@ def parse_commit_diff(project_git_url, commit_id):
                                                                                     dmm_unit_interfacing)))
 
 
+def commit_mutants_type(data_file_path, path_to_mutants_data, output_path):
+    data_frame = pd.read_csv(data_file_path, index_col="commit", thousands=",")
+    mutants_types = set()
+    mutants_types_dict = []
+
+    for _index, row in data_frame.iterrows():
+        mutationMatrixPath = path_to_mutants_data + "/" + row["project"] + "/" + _index + "/" + "mutationMatrix.csv"
+        mutantsInfoPath = path_to_mutants_data + "/" + row["project"] + "/" + _index + "/" + "mutants_info.csv"
+
+        assert os.path.exists(mutationMatrixPath), "Does not exists: " + mutationMatrixPath
+        assert os.path.exists(mutantsInfoPath), "Does not exists: " + mutantsInfoPath
+
+        print(_index)
+        all_fom_mutants, all_granularity_level, relevant_mutants, not_relevant_mutants, on_change_mutants, minimal_relevant_mutants = map_mutants(
+            mutants_info_path=mutantsInfoPath, mutation_matrix_path=mutationMatrixPath)
+
+        # group relevant mutants based on a mutant type
+        [mutants_types.add(mutant_type.mutant_operator) for mutant_type in relevant_mutants]
+        # print(mutants_types)
+        for mutants_type in mutants_types:
+            mutants_types_dict.append({"Mutant_Type": mutants_type,
+                                       "Mutants": len(
+                [mutant for mutant in relevant_mutants if mutant.mutant_operator == mutants_type]),
+                                       "Minimal_Mutants" : len(
+                [mutant for mutant in minimal_relevant_mutants if mutant.mutant_operator == mutants_type]),
+                                       "All_Mutants" : len(
+                [mutant for mutant in all_granularity_level if mutant.mutant_operator == mutants_type])})
+
+    try:
+        with open(output_path + "/mutants_type_distribution_extended_v2.csv", 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=["Mutant_Type", "Mutants", "Minimal_Mutants", "All_Mutants"])
+            writer.writeheader()
+            for data in mutants_types_dict:
+                writer.writerow(data)
+    except IOError:
+        print("I/O error")
+
+
+
 def commit_mutants_propertires(data_file_path, path_to_mutants_data, output_path):
     data_frame = pd.read_csv(data_file_path, index_col="commit", thousands=",")
 
@@ -210,5 +249,8 @@ if __name__ == '__main__':
 
     # parse_commit_diff(arguments.project_git_url, arguments.commit_id)
 
-    commit_mutants_propertires(data_file_path=arguments.statistics_file, path_to_mutants_data=arguments.path_to_mutants_data,
-                         output_path=arguments.output_dir)
+    # commit_mutants_propertires(data_file_path=arguments.statistics_file, path_to_mutants_data=arguments.path_to_mutants_data,
+    #                      output_path=arguments.output_dir)
+    commit_mutants_type(data_file_path=arguments.statistics_file,
+                               path_to_mutants_data=arguments.path_to_mutants_data,
+                               output_path=arguments.output_dir)
