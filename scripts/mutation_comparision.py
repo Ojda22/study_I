@@ -121,6 +121,92 @@ def map_mutants(mutants_info_path, mutation_matrix_path):
 
     return all_fom_mutants, all_granularity_level, relevant_mutants, not_relevant_mutants, on_change_mutants, minimal_relevant_mutants
 
+
+def return_tests(mutants_info_path, mutation_matrix_path):
+    mutants_info_df = pd.read_csv(filepath_or_buffer=mutants_info_path, index_col="MutantID", delimiter=",")
+    mutation_matrix_df = pd.read_csv(filepath_or_buffer=mutation_matrix_path, index_col="MutantID", delimiter=",")
+
+    developer_tests = set()
+    generated_tests = set()
+    for _index, row in mutation_matrix_df.iterrows():
+        for r in row.iteritems():
+            if "ESTest" in r[0]:
+                generated_tests.add(r[0])
+            else:
+                developer_tests.add(r[0])
+
+    return developer_tests, generated_tests
+
+
+def calculate_relevant_ms(mutants_info_path, mutation_matrix_path):
+    mutants_info_df = pd.read_csv(filepath_or_buffer=mutants_info_path, index_col="MutantID", delimiter=",").to_dict(
+        "index")
+    mutation_matrix_df = pd.read_csv(filepath_or_buffer=mutation_matrix_path, index_col="MutantID", delimiter=",")
+
+    killed_dev = 0
+    survived_dev = 0
+
+    for _index, row in mutation_matrix_df.iterrows():
+        killed_dev_label = False
+
+        mutant = mutants_info_df.get(_index)
+        if mutant["Minimal_relevant"] != 1:
+            continue
+
+        for r in row.iteritems():
+            if "ESTest" not in r[0]:
+                if r[1] == 1:
+                    killed_dev_label = True
+
+        if killed_dev_label:
+            killed_dev += 1
+        else:
+            survived_dev += 1
+
+    return round(killed_dev / (survived_dev + killed_dev) * 100, 2)
+
+
+def calculate_ms(mutants_info_path, mutation_matrix_path):
+    mutants_info_df = pd.read_csv(filepath_or_buffer=mutants_info_path, index_col="MutantID", delimiter=",").to_dict("index")
+    mutation_matrix_df = pd.read_csv(filepath_or_buffer=mutation_matrix_path, index_col="MutantID", delimiter=",")
+
+    killed_dev = 0
+    survived_dev = 0
+    killed_evo = 0
+    survived_evo = 0
+
+    killed = 0
+    survived = 0
+
+    for _index, row in mutation_matrix_df.iterrows():
+        killed_dev_label = False
+        killed_evo_label = False
+
+        for r in row.iteritems():
+            if "ESTest" not in r[0]:
+                if r[1] == 1:
+                    killed_dev_label = True
+            else:
+                if r[1] == 1:
+                    killed_evo_label = True
+
+        if killed_dev_label:
+            killed_dev += 1
+        else:
+            survived_dev += 1
+
+        if killed_evo_label:
+            killed_evo += 1
+        else:
+            survived_evo += 1
+
+        if killed_evo_label or killed_dev_label:
+            killed += 1
+        else:
+            survived += 1
+
+    return round(killed_dev / (survived_dev + killed_dev) * 100, 2), round(killed_evo / (survived_evo + killed_evo) * 100, 2), round(killed / (survived + killed) * 100, 2)
+
 if __name__ == '__main__':
     arguments = parse_args().parse_args()
 

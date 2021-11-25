@@ -93,7 +93,7 @@ def scatter_plot_2_by_2(data):
     print()
 
 
-def scatter_plot_joint_plot(data):
+def scatter_plot_joint_plot(data, output_dir):
     # fig, axes = plt.subplots(ncols=2, nrows=3, constrained_layout=True)
     #
     # fig.set_figheight(12)
@@ -132,18 +132,32 @@ def scatter_plot_joint_plot(data):
 
         axe.set_axis_labels(xlabel=dict["X_label"], ylabel=dict["Y_label"], fontsize=12)
 
+        # Spearman correlation
+        sr, sp = stats.spearmanr(data[dict["X_name"]], data[dict["Y_name"]])
+
+        """
+            Scatter_plot_correlations_minimal_relevant_mutants-mutants_on_change.pdf
+            Scatter_plot_correlations_minimal_relevant_mutants-minimal_mutants.pdf
+            
+            Scatter_plot_correlations_relevant_mutants-mutants_on_change.pdf
+            Scatter_plot_correlations_not_relevant_mutants-mutants_on_change.pdf
+            Scatter_plot_correlations_relevant_mutants-not_relevant_mutants.pdf
+        """
+
         pr, pp = stats.pearsonr(data[dict["X_name"]], data[dict["Y_name"]])
         kr, kp = stats.kendalltau(data[dict["X_name"]], data[dict["Y_name"]])
         # if you choose to write your own legend, then you should adjust the properties then
         phantom, = axe.ax_joint.plot([], [], linestyle="", alpha=0)
         # here graph is not a ax but a joint grid, so we access the axis through ax_joint method
 
-        label = 'pearson: r={:f}, p={:f}\nkendall: r={:f}, p={:f}'.format(pr, pp, kr, kp)
-        label_pearson = 'r={:f}, p={:f}'.format(pr,pp)
-        axe.ax_joint.legend([phantom], [label])
+        # label = 'pearson: r={:f}, p={:f}\nkendall: r={:f}, p={:f}'.format(pr, pp, kr, kp)
+        # label_pearson = 'r={:f}, p={:f}'.format(pr,pp)
+        label_spearman = 'spearmanr={:f}, p={:f}'.format(sr,sp)
+        # axe.ax_joint.legend([phantom], [label])
+        axe.ax_joint.legend([phantom], [label_spearman])
 
-        plt.savefig(os.path.join("./plots", f"Scatter_plot:correlations_{dict['X_name']}-{dict['Y_name']}.pdf"),
-                    format='pdf', dpi=1500)
+        plt.savefig(os.path.join(output_dir, f"Scatter_plot:correlations_{dict['X_name']}-{dict['Y_name']}_spearman.pdf"),
+                    format='pdf')
         # plt.tight_layout()
         plt.show()
         print()
@@ -188,6 +202,53 @@ def scatter_plot_joint_plot(data):
     # # plt.tight_layout()
     # plt.show()
     # print()
+
+
+def box_plot_stacked_MS(data, output_dir):
+    print(data.columns)
+    print(data.dtypes)
+    print(data.describe())
+
+    data.index = data.index + 1
+
+    data = data.sort_values(by=["relevant_MS"], ascending=True, ignore_index=True)
+    # data = data.sort_values(by=["dev_MS"], ascending=True, ignore_index=True)
+
+    fig, axes = plt.subplots(nrows=1, ncols=1)
+
+    fig.set_figheight(5)
+    fig.set_figwidth(12)
+
+    # RELEVANT MUTATION SCORE
+    sns.barplot(x=data.index, y=data["relevant_MS"], data=data)
+
+    plt.xlim(0, len(data.index) + 1)
+    plt.xticks(np.arange(np.min(data.index), np.max(data.index), 1), fontsize=1, color="w")
+    plt.tight_layout()
+    plt.show()
+
+    # b_top = axes.bar(x=data.index, height=data["MS"],
+    #                  facecolor='#ea4335', alpha=0.8, label='Mutation Score')
+    # b_middle = axes.bar(x=data.index, height=data['dev_MS'], facecolor='palegreen',
+    #                     alpha=0.8, label='Developer Mutation Score')
+    # # b_bottom = axes.bar(x=data.index, height=data['ration_of_relevant'], facecolor='palegreen', alpha=0.8,
+    # #                     label='Ratio of relevant mutants')
+    #
+    # # pattern parameter-> , hatch = 'x'
+    #
+    # axes.set_ylabel('MS - %')
+    # axes.set_xlabel('Commits')
+    # axes.legend(loc='upper right')
+    #
+    # plt.xlim(0, len(data.index) + 1)
+    # # plt.xticks(np.arange(np.min(data.index), np.max(data.index), 1), fontsize=5, rotation=45, color="w")
+    # plt.xticks(np.arange(np.min(data.index), np.max(data.index), 1), fontsize=1, color="w")
+    # # plt.yticks(np.arange(0, 1, 0.1))
+    #
+    # plt.tight_layout()
+    # plt.show()
+    # print()
+
 
 
 def box_plot_stacked(data, output_dir):
@@ -247,11 +308,12 @@ def box_plot_stacked(data, output_dir):
 def grouped_box_plots_computation_effort_simulation(data, output_dir):
     print("Columns:")
     print(data.columns)
-    print()
-    print(data["mutant_pool"].unique())
-    print(data["target"].unique())
+    # print()
+    # print(data["mutant_pool"].unique())
+    # print(data["target"].unique())
 
-    data = data[data["target"] == "Target_Relevant"]
+    # data = data[data["target"] == "Target_Relevant"]
+    data = data[data["target"] == "Target_Minimal_Relevant"]
 
     data = data.rename(columns={"ms_progression": "MS"})
 
@@ -300,17 +362,17 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
                         mapping_dict.append({"Technique": technique, "Mutants_Picked": mutants_picked, "Tests_picked": tests_picked, "MS": percentage})
 
 
-    print()
+    # print()
 
     data = pd.DataFrame(mapping_dict)
 
-    print(data.columns)
+    # print(data.columns)
 
-    data['Technique'] = data['Technique'].replace({ "All" : "Random", "Minimal_Relevant" : "Minimal Relevant" })
+    data['Technique'] = data['Technique'].replace({ "All" : "Random", "Relevant" : "Commit-Relevant", "Minimal_Relevant" : "Subsuming Commit-Relevant", "Modification" : "Within a change" }) # add modification plus change name of labels
 
     # data = data.loc[data['Technique'].isin(["Random", "Predicted", "Minimal", "Relevant"])]
     # data = data.loc[data['Technique'].isin(["Random", "Minimal", "Relevant", "Minimal_Relevant"])]
-    data = data.loc[data['Technique'].isin(["Random", "Relevant", "Minimal Relevant"])]
+    data = data.loc[data['Technique'].isin(["Random", "Commit-Relevant", "Subsuming Commit-Relevant", "Within a change"])] # add modification plus change name of labels
 
     stats = data.describe(include='all').loc[["mean", "std"]]
     print(stats)
@@ -335,7 +397,7 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     print("Number: ", len(outliers))
     # print("Range: {}-{}".format(np.min(outliers), np.max(outliers)))
 
-    print(data.dtypes)
+    # print(data.dtypes)
     data = data.loc[data["Tests_picked"] < 2000]
     print("After")
     min, max = np.min(data["Tests_picked"]), np.max(data["Tests_picked"])
@@ -343,15 +405,26 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     print("Max: ", max)
 
     print(data['Technique'].unique())
+    print("STATS:")
+    print("Random:")
+    print(data.loc[data["Technique"].isin(["Random"])].describe())
+    print("Commit-Relevant:")
+    print(data.loc[data["Technique"].isin(["Commit-Relevant"])].describe())
+    print("Subsuming Commit-Relevant:")
+    print(data.loc[data["Technique"].isin(["Subsuming Commit-Relevant"])].describe())
+    print("Within a change:")
+    print(data.loc[data["Technique"].isin(["Within a change"])].describe())
 
     # Share both X and Y axes with all subplots
     # fig, axes = plt.subplots(ncols=2, nrows=1, sharex='all', sharey='all')
     fig, axes = plt.subplots(ncols=1, nrows=1)
-    fig.set_figwidth(12)
-    fig.set_figheight(8)
+    fig.set_figwidth(13)
+    fig.set_figheight(10)
     # fig.add_subplot(111, frameon=False)
 
-    my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', 'Minimal Relevant': 'firebrick'}
+    # my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', 'Minimal Relevant': 'firebrick'}
+    my_pal = {'Random': 'cornflowerblue', 'Subsuming Commit-Relevant': 'firebrick', 'Within a change': 'pink',
+              'Commit-Relevant': 'palegreen'}
     # my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', "Minimal": "firebrick"}
 
     # m_picked = sea.boxplot(x="Technique", y="Mutants_Picked", data=data, ax=axes[0], palette=my_pal)
@@ -366,8 +439,9 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     t_picked.set_ylabel("Number of tests", fontsize=22)
     t_picked.tick_params(labelsize=22, axis='x')
     t_picked.tick_params(labelsize=22, axis='y')
-    t_picked.set_title("Computation effort for MS", fontsize=26)
+    t_picked.set_title("Computation effort for RMS", fontsize=26)
     t_picked.set_xlabel("", fontsize=22)
+    t_picked.set_xticklabels(t_picked.get_xticklabels(), rotation=10)
     t_picked.set_alpha(0.5)
     # t_picked.set_yticks(np.arange(0, max, 100))
 
@@ -376,12 +450,13 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     print("Minumum value: ", str(np.min(data["Tests_picked"])))
 
     #     hatches = ['/', '*', 'x', "O", "*"]
-    hatches = ['/', '*', '.']
+    # hatches = ['/', '*', '.']
+    hatches = ['/',"*", 'x', "O"]
     # hatches = ['/', '*', "O"]
     i = 0
     # for picked_bar, tests_picked in zip(m_picked.patches, t_picked.patches):
     for tests_picked in t_picked.patches:
-        if i == 3:
+        if i == 4:
             i = 0
         # picked_bar.set_hatch(hatches[i])
         tests_picked.set_hatch(hatches[i])
@@ -390,7 +465,7 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     i = 0
     # for picked_bar, tests_picked in zip(m_picked.artists, t_picked.artists):
     for tests_picked in t_picked.artists:
-        if i == 3:
+        if i == 4:
             i = 0
         # picked_bar.set_hatch(hatches[i])
         tests_picked.set_hatch(hatches[i])
@@ -403,7 +478,7 @@ def grouped_box_plots_computation_effort_simulation(data, output_dir):
     # fig.text(0.55, 0.01, 'Selections', ha='center', va='center')
     # fig.text(0.01, 0.5, 'common ylabel', ha='center', va='center', rotation='vertical')
 
-    plt.savefig(os.path.join(output_dir, "Box_plot:{}:{}.pdf".format('Simulation', "computational_effort_v2")),
+    plt.savefig(os.path.join(output_dir, "Box_plot:{}:{}.pdf".format('Simulation', "computational_effort_v3")),
                                              format='pdf',
                                              dpi=1200)
     # plt.savefig(os.path.join(dir_path,"{}_{}.eps".format('Boxplot', "human_effort_v2")),
@@ -426,22 +501,26 @@ def grouped_box_plots_developer_simulation(data, output_dir):
     print(data["target"].unique())
 
     data = data[data["target"] == "Target_Relevant"]
+    # data = data[data["target"] == "Target_Minimal_Relevant"]
 
     data = data.rename(columns={"ms_progression": "MS"})
 
     data.mutant_pool = data.mutant_pool.replace(
-        {"all": "Random", "relevant": "Relevant", "modification": "Modification", "minimal_relevant": "Minimal Relevant"})
+        {"all": "Random", "relevant": "Commit-Relevant", "modification": "Within a change", "minimal_relevant": "Subsuming Commit-Relevant"})
     # data.mutant_pool = data.mutant_pool.replace({"all": "Random", "relevant": "Relevant", "modification": "Modification"})
 
     # data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Relevant"])]
     # data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Minimal Relevant"])]
-    data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Minimal Relevant", "Relevant"])]
+    data = data.loc[data.mutant_pool.isin(["Random", "Within a change", "Subsuming Commit-Relevant", "Commit-Relevant"])]
     print(data.mutant_pool.unique())
+
+    print("DATA STATS:")
+    print(data.groupby(["limit", "mutant_pool"])["MS"].median())
 
     commits = data.commit.unique()
 
     # my_pal = {'Random': 'cornflowerblue', 'Minimal Relevant': 'firebrick', 'Modification': 'pink'}
-    my_pal = {'Random': 'cornflowerblue', 'Minimal Relevant': 'firebrick', 'Modification': 'pink', 'Relevant': 'palegreen'}
+    my_pal = {'Random': 'cornflowerblue', 'Subsuming Commit-Relevant': 'firebrick', 'Within a change': 'pink', 'Commit-Relevant': 'palegreen'}
     # my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', 'Modification': 'pink', "Minimal Relevant": "deepskyblue"}
     # for commit in commits:
     #     df_commit = data[data["commit"] == commit]
@@ -475,7 +554,7 @@ def grouped_box_plots_developer_simulation(data, output_dir):
     # b.set_title(commit)
     b.legend(loc="lower right", fontsize=26)
     # plt.savefig(os.path.join(output_dir,
-    #                          "Box_plot:{}:{}.pdf".format('Simulation', "relevant_ms_v2")),
+    #                          "Box_plot:{}:{}.pdf".format('Simulation', "minimal_relevant_ms_v3")),
     #             format='pdf',
     #             dpi=1200)
     # plt.savefig(os.path.join(dir_path,
@@ -569,10 +648,11 @@ if __name__ == '__main__':
     dataframe = pd.read_csv(filepath_or_buffer=arguments.path_to_data_file, thousands=",")
 
     # scatter_plot(data=dataframe)
-    # scatter_plot_joint_plot(data=dataframe)
+    scatter_plot_joint_plot(data=dataframe, output_dir=arguments.output_dir)
     # box_plot_stacked(data=dataframe, output_dir=arguments.output_dir)
     # pie_plot(output_dir=arguments.output_dir)
-    grouped_box_plots_developer_simulation(data=dataframe, output_dir=arguments.output_dir)
+    # grouped_box_plots_developer_simulation(data=dataframe, output_dir=arguments.output_dir)
     # grouped_box_plots_computation_effort_simulation(data=dataframe, output_dir=arguments.output_dir)
     # lineplot(data=dataframe, output_dir=arguments.output_dir)
     # venn_diagram(data=dataframe, output_dir=arguments.output_dir)
+    # box_plot_stacked_MS(data=dataframe, output_dir=arguments.output_dir)
