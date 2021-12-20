@@ -152,11 +152,12 @@ def scatter_plot_joint_plot(data, output_dir):
 
         # label = 'pearson: r={:f}, p={:f}\nkendall: r={:f}, p={:f}'.format(pr, pp, kr, kp)
         # label_pearson = 'r={:f}, p={:f}'.format(pr,pp)
-        label_spearman = 'spearmanr={:f}, p={:f}'.format(sr,sp)
+        # label_spearman = 'spearmanr={:f}, p={:f}'.format(sr,sp)
+        label = 'spearmanr: r={:f}, p={:f}\nkendall: r={:f}, p={:f}'.format(sr, sp, kr, kp)
         # axe.ax_joint.legend([phantom], [label])
-        axe.ax_joint.legend([phantom], [label_spearman])
+        axe.ax_joint.legend([phantom], [label])
 
-        plt.savefig(os.path.join(output_dir, f"Scatter_plot:correlations_{dict['X_name']}-{dict['Y_name']}_spearman.pdf"),
+        plt.savefig(os.path.join(output_dir, f"Scatter_plot:correlations_{dict['X_name']}-{dict['Y_name']}_spearman_kendall.pdf"),
                     format='pdf')
         # plt.tight_layout()
         plt.show()
