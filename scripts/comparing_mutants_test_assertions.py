@@ -5,8 +5,8 @@ from typing import Tuple, Type, List, Dict
 import xml.etree.ElementTree as ET
 import pandas as pd
 import json
-from pydriller import RepositoryMining
-from pydriller.metrics.process.hunks_count import HunksCount
+# from pydriller import RepositoryMining
+# from pydriller.metrics.process.hunks_count import HunksCount
 
 
 class MutantFile(object):
@@ -444,95 +444,95 @@ def find_assertion_by_id_test(assertions, assertID, testName, test_exception_fra
     return matching_elements[0]
 
 
-def metrices_per_file_changed(commit_id, project_git_url):
-    changed_files = dict()
-    num_of_files = 0
-    total_complexity = 0
-    total_added_lines = 0
-    total_hunks = 0
-    total_loc = 0
-    for commit in RepositoryMining(path_to_repo=project_git_url, single=commit_id).traverse_commits():
-        num_of_files = len(commit.modifications)
-        for m in commit.modifications:
-            changed_files[m.filename] = {"file_complexity":m.complexity, "loc":m.nloc, "added_lines":m.added, "tokens":m.token_count}
-            total_complexity += m.complexity
-            total_added_lines += m.added
-            total_loc += m.nloc
+# def metrices_per_file_changed(commit_id, project_git_url):
+#     changed_files = dict()
+#     num_of_files = 0
+#     total_complexity = 0
+#     total_added_lines = 0
+#     total_hunks = 0
+#     total_loc = 0
+#     for commit in RepositoryMining(path_to_repo=project_git_url, single=commit_id).traverse_commits():
+#         num_of_files = len(commit.modifications)
+#         for m in commit.modifications:
+#             changed_files[m.filename] = {"file_complexity":m.complexity, "loc":m.nloc, "added_lines":m.added, "tokens":m.token_count}
+#             total_complexity += m.complexity
+#             total_added_lines += m.added
+#             total_loc += m.nloc
+#
+#     hunks = HunksCount(path_to_repo=project_git_url, from_commit=commit_id, to_commit=commit_id)
+#     hunks_dict = hunks.count()
+#
+#     for file, hunks_number in hunks_dict.items():
+#         total_hunks += hunks_number
+#         file = file.split("/")[-1]
+#         if(file in changed_files.keys()):
+#             changed_files[file].update({"hunks":hunks_number})
+#
+#     changed_files["change_overall"] = {"num_of_files":num_of_files, "total_added_lines":total_added_lines, "total_complexity":total_complexity, "total_hunks":total_hunks, "total_loc":total_loc}
+#     return changed_files
 
-    hunks = HunksCount(path_to_repo=project_git_url, from_commit=commit_id, to_commit=commit_id)
-    hunks_dict = hunks.count()
 
-    for file, hunks_number in hunks_dict.items():
-        total_hunks += hunks_number
-        file = file.split("/")[-1]
-        if(file in changed_files.keys()):
-            changed_files[file].update({"hunks":hunks_number})
-
-    changed_files["change_overall"] = {"num_of_files":num_of_files, "total_added_lines":total_added_lines, "total_complexity":total_complexity, "total_hunks":total_hunks, "total_loc":total_loc}
-    return changed_files
-
-
-def createMutantsDataframe(mutants_list, mutants_on_line, minimal_mutants_relevant, df_columns, commitID, project_git_url):
-    rows = []
-    changed_files_dict = metrices_per_file_changed(commitID, project_git_url)
-    for mutant in mutants_list:
-        sourceFile = mutant.sourceFile
-        mutatedClass = mutant.class_name
-        mutatedMethod = mutant.mutatedMethod[0]
-        lineNumber = mutant.lineNumbers[0]
-        index = mutant.indexes[0]
-        block = mutant.blocks[0]
-        operator = mutant.mutant_operators[0]
-        methodDescription = mutant.methodDescription[0]
-
-        minimal = 0
-        if minimal_mutants_relevant is not None:
-            if mutant in minimal_mutants_relevant:
-                minimal = 1
-
-        # changed_file_dict = changed_files_dict[mutatedClass]
-        changed_file_dict = changed_files_dict[sourceFile]
-        changed_files_overall = changed_files_dict["change_overall"]
-
-        on_line = 0
-
-        rows.append({"sourceFile": sourceFile, "mutatedClass": mutatedClass, "mutatedMethod": mutatedMethod,
-                     "lineNumber": lineNumber, "index": index, "onLine": on_line, "minimal" : minimal,
-                     "block": block, "mutator": operator, "methodDescription": methodDescription,
-                     "file_complexity": str(changed_file_dict["file_complexity"]), "nloc":str(changed_file_dict["loc"]), "added_lines":str(changed_file_dict["added_lines"]), "tokens":str(changed_file_dict["tokens"]), "hunks":str(changed_file_dict["hunks"]),
-                     "num_of_files":str(changed_files_overall["num_of_files"]), "total_added_lines":str(changed_files_overall["total_added_lines"]), "total_complexity":str(changed_files_overall["total_complexity"]), "total_hunks":str(changed_files_overall["total_hunks"]), "total_loc":str(changed_files_overall["total_loc"])})
-
-    if mutants_on_line is not None:
-        for mutant in mutants_on_line:
-            sourceFile = mutant.sourceFile
-            mutatedClass = mutant.class_name
-            mutatedMethod = mutant.mutatedMethod[0]
-            lineNumber = mutant.lineNumbers[0]
-            index = mutant.indexes[0]
-            block = mutant.blocks[0]
-            operator = mutant.mutant_operators[0]
-            methodDescription = mutant.methodDescription[0]
-
-            # changed_file_dict = changed_files_dict[mutatedClass]
-            changed_file_dict = changed_files_dict[sourceFile]
-            changed_files_overall = changed_files_dict["change_overall"]
-
-            on_line = 1
-
-            rows.append({"sourceFile": sourceFile, "mutatedClass": mutatedClass, "mutatedMethod": mutatedMethod,
-                         "lineNumber": lineNumber, "index": index, "onLine": on_line, "minimal" : 0,
-                         "block": block, "mutator": operator, "methodDescription": methodDescription,
-                         "file_complexity": str(changed_file_dict["file_complexity"]),
-                         "nloc": str(changed_file_dict["loc"]), "added_lines": str(changed_file_dict["added_lines"]),
-                         "tokens": str(changed_file_dict["tokens"]), "hunks": str(changed_file_dict["hunks"]),
-                         "num_of_files": str(changed_files_overall["num_of_files"]),
-                         "total_added_lines": str(changed_files_overall["total_added_lines"]),
-                         "total_complexity": str(changed_files_overall["total_complexity"]),
-                         "total_hunks": str(changed_files_overall["total_hunks"]),
-                         "total_loc": str(changed_files_overall["total_loc"])})
-
-    dataframe = pd.DataFrame(rows, columns=df_columns)
-    return dataframe
+# def createMutantsDataframe(mutants_list, mutants_on_line, minimal_mutants_relevant, df_columns, commitID, project_git_url):
+#     rows = []
+#     changed_files_dict = metrices_per_file_changed(commitID, project_git_url)
+#     for mutant in mutants_list:
+#         sourceFile = mutant.sourceFile
+#         mutatedClass = mutant.class_name
+#         mutatedMethod = mutant.mutatedMethod[0]
+#         lineNumber = mutant.lineNumbers[0]
+#         index = mutant.indexes[0]
+#         block = mutant.blocks[0]
+#         operator = mutant.mutant_operators[0]
+#         methodDescription = mutant.methodDescription[0]
+#
+#         minimal = 0
+#         if minimal_mutants_relevant is not None:
+#             if mutant in minimal_mutants_relevant:
+#                 minimal = 1
+#
+#         # changed_file_dict = changed_files_dict[mutatedClass]
+#         changed_file_dict = changed_files_dict[sourceFile]
+#         changed_files_overall = changed_files_dict["change_overall"]
+#
+#         on_line = 0
+#
+#         rows.append({"sourceFile": sourceFile, "mutatedClass": mutatedClass, "mutatedMethod": mutatedMethod,
+#                      "lineNumber": lineNumber, "index": index, "onLine": on_line, "minimal" : minimal,
+#                      "block": block, "mutator": operator, "methodDescription": methodDescription,
+#                      "file_complexity": str(changed_file_dict["file_complexity"]), "nloc":str(changed_file_dict["loc"]), "added_lines":str(changed_file_dict["added_lines"]), "tokens":str(changed_file_dict["tokens"]), "hunks":str(changed_file_dict["hunks"]),
+#                      "num_of_files":str(changed_files_overall["num_of_files"]), "total_added_lines":str(changed_files_overall["total_added_lines"]), "total_complexity":str(changed_files_overall["total_complexity"]), "total_hunks":str(changed_files_overall["total_hunks"]), "total_loc":str(changed_files_overall["total_loc"])})
+#
+#     if mutants_on_line is not None:
+#         for mutant in mutants_on_line:
+#             sourceFile = mutant.sourceFile
+#             mutatedClass = mutant.class_name
+#             mutatedMethod = mutant.mutatedMethod[0]
+#             lineNumber = mutant.lineNumbers[0]
+#             index = mutant.indexes[0]
+#             block = mutant.blocks[0]
+#             operator = mutant.mutant_operators[0]
+#             methodDescription = mutant.methodDescription[0]
+#
+#             # changed_file_dict = changed_files_dict[mutatedClass]
+#             changed_file_dict = changed_files_dict[sourceFile]
+#             changed_files_overall = changed_files_dict["change_overall"]
+#
+#             on_line = 1
+#
+#             rows.append({"sourceFile": sourceFile, "mutatedClass": mutatedClass, "mutatedMethod": mutatedMethod,
+#                          "lineNumber": lineNumber, "index": index, "onLine": on_line, "minimal" : 0,
+#                          "block": block, "mutator": operator, "methodDescription": methodDescription,
+#                          "file_complexity": str(changed_file_dict["file_complexity"]),
+#                          "nloc": str(changed_file_dict["loc"]), "added_lines": str(changed_file_dict["added_lines"]),
+#                          "tokens": str(changed_file_dict["tokens"]), "hunks": str(changed_file_dict["hunks"]),
+#                          "num_of_files": str(changed_files_overall["num_of_files"]),
+#                          "total_added_lines": str(changed_files_overall["total_added_lines"]),
+#                          "total_complexity": str(changed_files_overall["total_complexity"]),
+#                          "total_hunks": str(changed_files_overall["total_hunks"]),
+#                          "total_loc": str(changed_files_overall["total_loc"])})
+#
+#     dataframe = pd.DataFrame(rows, columns=df_columns)
+#     return dataframe
 
 def find_intersection_of_assertions(X_assertions, Y_assertions):
     x_assertions = []
@@ -599,6 +599,9 @@ if __name__ == '__main__':
     relevant_mutants = set()
     not_relevant_mutants = set()
     all_first_order = set()
+
+    relevant_on_line = set()
+
     for XY, X_and_Y in foms_to_som_map.items():
         X = X_and_Y[0]
         Y = X_and_Y[1]
@@ -631,26 +634,29 @@ if __name__ == '__main__':
                 if y_assertion.text != som_assertion.text:
                     if X.status == "KILLED":
                         relevant = True
-                        # break
-                    # mutant_satisfies_dif_output_but_not_killed.add(X)
-                    else:
-                        relevant = False
                         break
-                else:
-                    relevant = False
-                    break
-            else:
-                relevant = False
-                break
+                    # mutant_satisfies_dif_output_but_not_killed.add(X)
+            #         else:
+            #             relevant = False
+            #             break
+            #     else:
+            #         relevant = False
+            #         break
+            # else:
+            #     relevant = False
+            #     break
             mutant_satisfies_dif_output_but_not_killed.add(X)
-
 
         if relevant:
             relevant_mutants.add(X)
+            relevant_on_line.add(Y)
 
         all_first_order.add(X)
 
     not_relevant_mutants = [mutant for mutant in all_first_order if mutant not in relevant_mutants and mutant not in mutants_on_line]
+
+    intersection = relevant_on_line.intersection(mutants_on_line)
+    print(intersection)
 
     # print("\nNumber of first order mutants: {}".format(len(fom_mutants)))
     # print("Number of mutants on change: {}".format(len(mutants_on_line)))
@@ -786,12 +792,12 @@ if __name__ == '__main__':
                     "num_of_files", "total_added_lines", "total_complexity", "total_hunks", "total_loc"]
 
 
-        relevantMutantsDF = createMutantsDataframe(relevant_mutants, mutants_on_line, minimal_mutants_relevant, df_columns, arguments.commitID, arguments.project_git_url)
-        not_relevantMutantsDF = createMutantsDataframe(not_relevant_mutants, None, None, df_columns, arguments.commitID, arguments.project_git_url)
+        # relevantMutantsDF = createMutantsDataframe(relevant_mutants, mutants_on_line, minimal_mutants_relevant, df_columns, arguments.commitID, arguments.project_git_url)
+        # not_relevantMutantsDF = createMutantsDataframe(not_relevant_mutants, None, None, df_columns, arguments.commitID, arguments.project_git_url)
 
-        with open("./minimal_relevant_mutants_hard.json", "w") as fileR:
-            relevantMutantsDF.to_json(fileR, orient="records")
-
-        with open("./minimal_not_relevant_mutants_hard.json", "w") as fileR:
-            not_relevantMutantsDF.to_json(fileR, orient="records")
+        # with open("./minimal_relevant_mutants_hard.json", "w") as fileR:
+        #     relevantMutantsDF.to_json(fileR, orient="records")
+        #
+        # with open("./minimal_not_relevant_mutants_hard.json", "w") as fileR:
+        #     not_relevantMutantsDF.to_json(fileR, orient="records")
 
