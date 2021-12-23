@@ -184,7 +184,7 @@ def features_distribution(dataframe):
         # print(not_relevantData.describe())
 
     # calculate the correlation matrix
-    corr = test_df.corr()
+    corr = test_df.corr(method="spearman")
     print(corr)
 
     indexes = [v for v in corr.index.to_list() if v.startswith("N_")]
@@ -211,9 +211,8 @@ def features_distribution(dataframe):
     loc, labels = plt.xticks()
     ans.set_xticklabels(labels, rotation=35)
     plt.savefig(os.path.join("/Users/milos.ojdanic/phd_workspace/Mutants_CI/relevantMutant_Milos/study_I/plots",
-                             "Heatmap:{}:{}.pdf".format('Mutants', "properties")),
-                format='pdf',
-                dpi=1500)
+                             "Heatmap:{}:{}.pdf".format('Mutants', "properties_spearman")),
+                format='pdf')
     plt.tight_layout()
     plt.show()
 

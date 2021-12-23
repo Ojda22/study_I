@@ -507,12 +507,12 @@ def grouped_box_plots_developer_simulation(data, output_dir):
     data = data.rename(columns={"ms_progression": "MS"})
 
     data.mutant_pool = data.mutant_pool.replace(
-        {"all": "Random", "relevant": "Commit-Relevant", "modification": "Within a change", "minimal_relevant": "Subsuming Commit-Relevant"})
+        {"all": "All Mutants", "relevant": "Commit-Relevant", "modification": "Within a change", "minimal_relevant": "Subsuming Commit-Relevant"})
     # data.mutant_pool = data.mutant_pool.replace({"all": "Random", "relevant": "Relevant", "modification": "Modification"})
 
     # data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Relevant"])]
     # data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Minimal Relevant"])]
-    data = data.loc[data.mutant_pool.isin(["Random", "Within a change", "Subsuming Commit-Relevant", "Commit-Relevant"])]
+    data = data.loc[data.mutant_pool.isin(["All Mutants", "Within a change", "Subsuming Commit-Relevant", "Commit-Relevant"])]
     print(data.mutant_pool.unique())
 
     print("DATA STATS:")
@@ -521,7 +521,7 @@ def grouped_box_plots_developer_simulation(data, output_dir):
     commits = data.commit.unique()
 
     # my_pal = {'Random': 'cornflowerblue', 'Minimal Relevant': 'firebrick', 'Modification': 'pink'}
-    my_pal = {'Random': 'cornflowerblue', 'Subsuming Commit-Relevant': 'firebrick', 'Within a change': 'pink', 'Commit-Relevant': 'palegreen'}
+    my_pal = {'All Mutants': 'cornflowerblue', 'Subsuming Commit-Relevant': 'firebrick', 'Within a change': 'pink', 'Commit-Relevant': 'palegreen'}
     # my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', 'Modification': 'pink', "Minimal Relevant": "deepskyblue"}
     # for commit in commits:
     #     df_commit = data[data["commit"] == commit]
@@ -554,10 +554,87 @@ def grouped_box_plots_developer_simulation(data, output_dir):
     b.set_title("Progression of Relevant Mutation Score", fontsize=26)
     # b.set_title(commit)
     b.legend(loc="lower right", fontsize=26)
-    # plt.savefig(os.path.join(output_dir,
-    #                          "Box_plot:{}:{}.pdf".format('Simulation', "minimal_relevant_ms_v3")),
-    #             format='pdf',
+    plt.savefig(os.path.join(output_dir,
+                             "Box_plot:{}:{}.pdf".format('Simulation', "relevant_ms_v4")),
+                format='pdf')
+    # plt.savefig(os.path.join(dir_path,
+    #                          "{}_{}.eps".format('Boxplot', "progression_MS_prediction_v2")),
+    #             format='eps',
     #             dpi=1200)
+    plt.tight_layout()
+    plt.show()
+    print()
+
+
+def grouped_box_plots_developer_simulation_comparing_efficiency(data, output_dir):
+    # data.columns = data.columns.to_series().apply(lambda x: x.strip())
+
+    print("Columns")
+    print(data.columns)
+    print()
+    print(data["mutant_pool"].unique())
+    print(data["target"].unique())
+
+    data = data[data["target"] == "Target_Relevant"]
+    # data = data[data["target"] == "Target_Minimal_Relevant"]
+
+    data = data.loc[data["tests_picked"] < 5000]
+
+    print(data.groupby([data.limit, data.mutant_pool])[['tests_picked']].median())
+
+    data = data.rename(columns={"ms_progression": "MS"})
+
+    data.mutant_pool = data.mutant_pool.replace(
+        {"all": "All Mutants", "relevant": "Commit-Relevant", "modification": "Within a change", "minimal_relevant": "Subsuming Commit-Relevant"})
+    # data.mutant_pool = data.mutant_pool.replace({"all": "Random", "relevant": "Relevant", "modification": "Modification"})
+
+    # data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Relevant"])]
+    # data = data.loc[data.mutant_pool.isin(["Random", "Modification", "Minimal Relevant"])]
+    data = data.loc[data.mutant_pool.isin(["All Mutants", "Within a change", "Subsuming Commit-Relevant", "Commit-Relevant"])]
+    print(data.mutant_pool.unique())
+
+    print("DATA STATS:")
+    print(data.groupby(["limit", "mutant_pool"])["MS"].median())
+
+    commits = data.commit.unique()
+
+    # my_pal = {'Random': 'cornflowerblue', 'Minimal Relevant': 'firebrick', 'Modification': 'pink'}
+    my_pal = {'All Mutants': 'cornflowerblue', 'Subsuming Commit-Relevant': 'firebrick', 'Within a change': 'pink', 'Commit-Relevant': 'palegreen'}
+    # my_pal = {'Random': 'cornflowerblue', 'Relevant': 'palegreen', 'Modification': 'pink', "Minimal Relevant": "deepskyblue"}
+    # for commit in commits:
+    #     df_commit = data[data["commit"] == commit]
+
+    fig = plt.figure(figsize=(15, 8))
+    b = sns.boxplot(x="limit", y="tests_picked", hue="mutant_pool", data=data, palette=my_pal)
+    # ax = sns.swarmplot(x="limit", y="MS", data=df_commits, color=".25")
+    # hatches = ['/', '+', '//', '-', 'x', '\\', '*', 'o', 'O']
+    # hatches = ['/', '*', 'x', "O"]
+    # hatches = ['/', '*', "x"]
+    hatches = ['/',"*", 'x', "O"]
+    i = 0
+    for bar in b.patches:
+        if i == 4:
+            i = 0
+        bar.set_hatch(hatches[i])
+        i += 1
+
+    i = 0
+    for patch in b.artists:
+        if i == 4:
+            i = 0
+        patch.set_hatch(hatches[i])
+        i += 1
+
+    b.set_alpha(0.5)
+    b.set_xlabel("Number of selected mutants", fontsize=22)
+    b.set_ylabel("Test execution (number of tests)", fontsize=22)
+    b.tick_params(labelsize=22)
+    # b.set_title("Targeting Subsuming Commit-Relevant Mutation Score (RMS*)", fontsize=26)
+    # b.set_title(commit)
+    b.legend(loc="upper right", fontsize=26)
+    plt.savefig(os.path.join(output_dir,
+                             "Box_plot:{}:{}.pdf".format('Simulation', "computational_effort_v5")),
+                format='pdf')
     # plt.savefig(os.path.join(dir_path,
     #                          "{}_{}.eps".format('Boxplot', "progression_MS_prediction_v2")),
     #             format='eps',
@@ -649,10 +726,11 @@ if __name__ == '__main__':
     dataframe = pd.read_csv(filepath_or_buffer=arguments.path_to_data_file, thousands=",")
 
     # scatter_plot(data=dataframe)
-    scatter_plot_joint_plot(data=dataframe, output_dir=arguments.output_dir)
+    # scatter_plot_joint_plot(data=dataframe, output_dir=arguments.output_dir)
     # box_plot_stacked(data=dataframe, output_dir=arguments.output_dir)
     # pie_plot(output_dir=arguments.output_dir)
     # grouped_box_plots_developer_simulation(data=dataframe, output_dir=arguments.output_dir)
+    grouped_box_plots_developer_simulation_comparing_efficiency(data=dataframe, output_dir=arguments.output_dir)
     # grouped_box_plots_computation_effort_simulation(data=dataframe, output_dir=arguments.output_dir)
     # lineplot(data=dataframe, output_dir=arguments.output_dir)
     # venn_diagram(data=dataframe, output_dir=arguments.output_dir)
